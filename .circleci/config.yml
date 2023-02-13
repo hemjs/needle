@@ -6,7 +6,7 @@ aliases:
       key: dependency-cache-{{ checksum "package.json" }}
   - &install-deps
     run:
-      name: Instal dependencies
+      name: Install dependencies
       command: npm ci
   - &build-packages
     run:
