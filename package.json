@@ -1,0 +1,62 @@
+{
+  "name": "@hemjs/needle",
+  "version": "0.0.0",
+  "description": "A fast and intuitive dependency injection container for JavaScript and Node.js",
+  "author": "Augustus Kamau",
+  "license": "MIT",
+  "keywords": [
+    "hemjs",
+    "needle",
+    "container",
+    "dependency-injection"
+  ],
+  "scripts": {
+    "prebuild": "rimraf dist",
+    "build": "tsc -p tsconfig.build.json",
+    "format": "prettier --write \"src/**/*.ts\" \"tests/**/*.ts\"",
+    "lint": "eslint \"{src,tests}/**/*.ts\" --fix",
+    "test": "jest",
+    "test:cov": "jest --coverage",
+    "prerelease": "npm run prebuild && npm run build",
+    "release": "release-it"
+  },
+  "devDependencies": {
+    "@armscye/container": "0.3.0",
+    "@armscye/core": "0.2.0",
+    "@commitlint/cli": "18.6.0",
+    "@commitlint/config-conventional": "18.6.0",
+    "@types/jest": "29.5.12",
+    "@types/node": "20.11.16",
+    "@typescript-eslint/eslint-plugin": "6.21.0",
+    "@typescript-eslint/parser": "6.21.0",
+    "eslint": "8.56.0",
+    "eslint-config-prettier": "9.1.0",
+    "eslint-plugin-import": "2.29.1",
+    "eslint-plugin-simple-import-sort": "10.0.0",
+    "husky": "9.0.10",
+    "jest": "29.7.0",
+    "lint-staged": "15.2.2",
+    "prettier": "3.2.5",
+    "release-it": "17.0.3",
+    "rimraf": "5.0.5",
+    "ts-jest": "29.1.2",
+    "typescript": "5.3.3"
+  },
+  "homepage": "https://github.com/hemjs/needle#readme",
+  "bugs": {
+    "url": "https://github.com/hemjs/needle/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hemjs/needle.git"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "lint-staged": {
+    "*.ts": [
+      "prettier --write",
+      "eslint --fix"
+    ]
+  }
+}
