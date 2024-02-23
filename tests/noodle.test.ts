@@ -265,7 +265,7 @@ test('Needle throws for conflicting aliases to non-existent providers', () => {
 
 test('Needle throws for aliases with undefined token', () => {
   expect(
-    () => new Needle([{ provide: Engine.name, useExisting: undefined }]),
+    () => new Needle([{ provide: Engine.name, useExisting: undefined as any }]),
   ).toThrow(
     'Invalid provider definition detected; only instances of Provider are allowed, got: [{"provide":"Engine"}].',
   );
