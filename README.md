@@ -29,6 +29,8 @@ yarn add @hemjs/needle
 ## Quick start
 
 ```tsx
+import { Needle } from '@hemjs/needle';
+
 // Placeholder for a class that interacts with user data storage (implementation not shown).
 class UserRepository {}
 
