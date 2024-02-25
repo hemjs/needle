@@ -11,6 +11,7 @@
 - [Container](#container)
 - [Providers](#providers)
 - [Best practices](#best-practices)
+- [License](#license)
 
 ## Installation
 
@@ -383,3 +384,9 @@ Aliases can be particularly valuable in several situations, such as when:
 - Use logging responsibly to monitor container activity and troubleshoot issues without sacrificing performance.
 - Before deployment, test your provider configurations and dependencies to prevent potential issues.
 - Verify provider configurations during container creation to catch issues early.
+
+## License
+
+This project is licensed under the **MIT license**.
+
+See [LICENSE](LICENSE) for more information.
