@@ -44,7 +44,7 @@ class UserService {
   }
 
   // Example method using UserRepository to retrieve a user by ID
-  async getUserById(userId: number): Promise<User> {
+  async getUserById(userId: number): Promise {
     return this.userRepository.getUserById(userId);
   }
 }
@@ -274,7 +274,7 @@ Needle prioritizes error handling throughout the dependency resolution process, 
 
 A Needle container manages one or more providers. These providers tell the container how to create and manage the services your application needs to function.They are created based on provider definitions supplied to the container.
 
-A provider definition is essentially a blueprint for constructing the services your application needs. When instructed to provide a specific service (identified by its token), the Noodle container consults the corresponding blueprint and uses its instructions to either create a new instance or retrieve an existing one.
+A provider definition is essentially a blueprint for constructing the services your application needs. When instructed to provide a specific service (identified by its token), the Needle container consults the corresponding blueprint and uses its instructions to either create a new instance or retrieve an existing one.
 
 ### Provider configuration
 
