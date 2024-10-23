@@ -217,7 +217,7 @@ export class Needle implements Container {
     }
   }
 
-  classToFactory(type: NoArgument): () => any {
+  classToFactory(type: NoArgument<any>): () => any {
     if (!this.isNewable(type)) {
       throw new InvalidClassError(type);
     }
@@ -225,7 +225,7 @@ export class Needle implements Container {
     if (paramLength > 0) {
       throw new InvalidConstructorError(type);
     }
-    return () => new type();
+    return () => new (type as Type<any>)();
   }
 
   isNewable(type: Type<any>): boolean {
