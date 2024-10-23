@@ -225,7 +225,7 @@ export class Needle implements Container {
     if (paramLength > 0) {
       throw new InvalidConstructorError(type);
     }
-    return () => new (type as NoArgument<any>)();
+    return () => new type();
   }
 
   isNewable(type: Type<any>): boolean {
