@@ -1,6 +1,6 @@
 {
   "name": "@hemjs/needle",
-  "version": "1.2.6",
+  "version": "1.2.7",
   "description": "A fast and intuitive dependency injection container for JavaScript and Node.js",
   "author": "Augustus Kamau",
   "license": "MIT",
