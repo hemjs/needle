@@ -9,6 +9,7 @@
 - [Introduction](#introduction)
 - [Features](#features)
 - [Container](#container)
+- [Lifetime](#lifetime)
 - [Providers](#providers)
 - [Best practices](#best-practices)
 - [License](#license)
@@ -196,6 +197,8 @@ const loggerService = container.get<LoggerService>('LOGGER');
 
 ### Shared
 
+> **Deprecated:** The `shared` option is deprecated. Use [`lifetime`](#lifetime) instead.
+
 Needle container shares instances by default. This means that calling the `get` method multiple times for a given service will return the same instance. This promotes efficiency by conserving memory and potentially enhancing performance:
 
 ```tsx
@@ -243,6 +246,79 @@ const container = new Needle([
   { provide: LoggerService.name, useClass: LoggerService, shared: true },
   { shared: false },
 ]);
+
+const obj1 = container.get<LoggerService>(LoggerService.name);
+const obj2 = container.get<LoggerService>(LoggerService.name);
+
+console.log(obj1 === obj2); // Output: true
+```
+
+### Lifetime
+
+The `lifetime` option controls whether a service instance is reused across resolutions or a new instance is created each time. It accepts two values:
+
+| Value       | Description                                                                    |
+| ----------- | ------------------------------------------------------------------------------ |
+| `singleton` | The instance is resolved once, cached, and reused for all subsequent requests. |
+| `transient` | A new instance is created for every resolution request.                        |
+
+By default, Needle uses `singleton` lifetime, meaning that calling `get` multiple times for the same token returns the same instance:
+
+```tsx
+const container = new Needle([
+  { provide: LoggerService.name, useClass: LoggerService },
+]);
+
+const obj1 = container.get<LoggerService>(LoggerService.name);
+const obj2 = container.get<LoggerService>(LoggerService.name);
+
+console.log(obj1 === obj2); // Output: true
+```
+
+To create a new instance on every resolution, set `lifetime: 'transient'` on the provider:
+
+```tsx
+const container = new Needle([
+  {
+    provide: LoggerService.name,
+    useClass: LoggerService,
+    lifetime: 'transient',
+  },
+]);
+
+const obj1 = container.get<LoggerService>(LoggerService.name);
+const obj2 = container.get<LoggerService>(LoggerService.name);
+
+console.log(obj1 === obj2); // Output: false
+```
+
+To change the default lifetime for all providers, pass the `lifetime` option to the constructor:
+
+```tsx
+const container = new Needle(
+  [{ provide: LoggerService.name, useClass: LoggerService }],
+  { lifetime: 'transient' },
+);
+
+const obj1 = container.get<LoggerService>(LoggerService.name);
+const obj2 = container.get<LoggerService>(LoggerService.name);
+
+console.log(obj1 === obj2); // Output: false
+```
+
+A provider-level `lifetime` always overrides the global option:
+
+```tsx
+const container = new Needle(
+  [
+    {
+      provide: LoggerService.name,
+      useClass: LoggerService,
+      lifetime: 'singleton',
+    },
+  ],
+  { lifetime: 'transient' },
+);
 
 const obj1 = container.get<LoggerService>(LoggerService.name);
 const obj2 = container.get<LoggerService>(LoggerService.name);
