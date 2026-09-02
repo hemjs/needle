@@ -4,6 +4,7 @@ import {
   ExistingProvider,
   Factory,
   FactoryProvider,
+  Lifetime,
   Provider,
   ProviderToken,
   ValueProvider,
@@ -22,6 +23,7 @@ import {
 
 export interface NeedleOptions {
   shared?: boolean;
+  lifetime?: Lifetime;
 }
 
 export class Needle implements Container {
@@ -46,15 +48,15 @@ export class Needle implements Container {
       if (this.isValueProvider(provider)) {
         this.services.set(provider.provide, provider.useValue);
       } else if (this.isClassProvider(provider)) {
-        const { provide, useClass, shared } = provider;
+        const { provide, useClass, shared, lifetime } = provider;
         const factory = this.classToFactory(useClass);
-        this.records.set(provide, this.makeRecord(factory, shared));
+        this.records.set(provide, this.makeRecord(factory, shared, lifetime));
       } else if (this.isFactoryProvider(provider)) {
-        const { provide, useFactory: factory, shared } = provider;
-        this.records.set(provide, this.makeRecord(factory, shared));
+        const { provide, useFactory: factory, shared, lifetime } = provider;
+        this.records.set(provide, this.makeRecord(factory, shared, lifetime));
       } else if (this.isExistingProvider(provider)) {
-        const { provide, useExisting: token, shared } = provider;
-        this.aliases.set(provide, this.makeAlias(token, shared));
+        const { provide, useExisting: token, shared, lifetime } = provider;
+        this.aliases.set(provide, this.makeAlias(token, shared, lifetime));
         newAlias = true;
       } else {
         throw new InvalidProviderError(provider);
@@ -122,15 +124,20 @@ export class Needle implements Container {
     if (this.isValueProvider(provider)) {
       this.services.set(provider.provide, provider.useValue);
     } else if (this.isClassProvider(provider)) {
-      const { provide, useClass, shared } = provider;
+      const { provide, useClass, shared, lifetime } = provider;
       const factory = this.classToFactory(useClass);
-      this.records.set(provide, this.makeRecord(factory, shared));
+      this.records.set(provide, this.makeRecord(factory, shared, lifetime));
     } else if (this.isFactoryProvider(provider)) {
-      const { provide, useFactory: factory, shared } = provider;
-      this.records.set(provide, this.makeRecord(factory, shared));
+      const { provide, useFactory: factory, shared, lifetime } = provider;
+      this.records.set(provide, this.makeRecord(factory, shared, lifetime));
     } else if (this.isExistingProvider(provider)) {
-      const { useExisting: target, provide: alias, shared } = provider;
-      this.mapAliasToTarget(alias, target, shared);
+      const {
+        useExisting: target,
+        provide: alias,
+        shared,
+        lifetime,
+      } = provider;
+      this.mapAliasToTarget(alias, target, shared, lifetime);
     } else {
       throw new InvalidProviderError(provider);
     }
@@ -178,9 +185,10 @@ export class Needle implements Container {
     alias: ProviderToken,
     target: ProviderToken,
     shared: boolean | undefined,
+    lifetime?: Lifetime,
   ): void {
     const nTarget = this.aliases.get(target) ?? target;
-    this.aliases.set(alias, this.makeAlias(nTarget, shared));
+    this.aliases.set(alias, this.makeAlias(nTarget, shared, lifetime));
     if (alias === this.aliases.get(alias)?.token) {
       throw new CyclicAliasError(alias, this.aliases);
     }
@@ -232,25 +240,35 @@ export class Needle implements Container {
     return typeof type === 'function' && type.prototype !== 'undefined';
   }
 
-  makeAlias<T = any>(token: T, shared?: boolean) {
+  makeAlias<T = any>(token: T, shared?: boolean, lifetime?: Lifetime) {
     return {
       token: token,
-      shared: this.isShared(shared),
+      shared: this.isShared(shared, lifetime),
     };
   }
 
-  makeRecord<T = any>(factory: Factory<T>, shared?: boolean) {
+  makeRecord<T = any>(
+    factory: Factory<T>,
+    shared?: boolean,
+    lifetime?: Lifetime,
+  ) {
     return {
       factory: factory,
-      shared: this.isShared(shared),
+      shared: this.isShared(shared, lifetime),
     };
   }
 
-  isShared(shared?: boolean): boolean {
+  isShared(shared?: boolean, lifetime?: Lifetime): boolean {
+    if (typeof lifetime === 'string') {
+      return lifetime === 'singleton';
+    }
     if (typeof shared === 'boolean') {
       return shared;
     }
-    if (typeof this.options.shared == 'boolean') {
+    if (typeof this.options.lifetime === 'string') {
+      return this.options.lifetime === 'singleton';
+    }
+    if (typeof this.options.shared === 'boolean') {
       return this.options.shared;
     }
     return true;

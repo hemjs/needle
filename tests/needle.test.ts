@@ -537,3 +537,138 @@ test('Needle throws for cyclic chains of aliases', () => {
     'Cycle detected within the aliases definitions:\n TurboEngine -> TurboEngine\n',
   );
 });
+
+test('Needle caches instances with provider (lifetime: singleton)', () => {
+  const needle = new Needle([
+    { provide: Engine.name, useClass: Engine, lifetime: 'singleton' },
+  ]);
+
+  const a1 = needle.get(Engine.name);
+  const a2 = needle.get(Engine.name);
+
+  expect(a1).toBe(a2);
+});
+
+test('Needle disables caching with provider (lifetime: transient)', () => {
+  const needle = new Needle([
+    { provide: Engine.name, useClass: Engine, lifetime: 'transient' },
+  ]);
+
+  const a1 = needle.get(Engine.name);
+  const a2 = needle.get(Engine.name);
+
+  expect(a1).not.toBe(a2);
+});
+
+test('Needle overrides default caching (lifetime: transient)', () => {
+  const needle = new Needle([{ provide: Engine.name, useClass: Engine }], {
+    lifetime: 'transient',
+  });
+
+  const a1 = needle.get(Engine.name);
+  const a2 = needle.get(Engine.name);
+
+  expect(a1).not.toBe(a2);
+});
+
+test('Needle overrides global `lifetime` option with provider (lifetime: singleton)', () => {
+  const needle = new Needle(
+    [{ provide: Engine.name, useClass: Engine, lifetime: 'singleton' }],
+    { lifetime: 'transient' },
+  );
+
+  const a1 = needle.get(Engine.name);
+  const a2 = needle.get(Engine.name);
+
+  expect(a1).toBe(a2);
+});
+
+test('Needle lifetime takes precedence over shared at provider level', () => {
+  const needle = new Needle([
+    {
+      provide: Engine.name,
+      useClass: Engine,
+      shared: true,
+      lifetime: 'transient',
+    },
+  ]);
+
+  const a1 = needle.get(Engine.name);
+  const a2 = needle.get(Engine.name);
+
+  expect(a1).not.toBe(a2);
+});
+
+test('Needle global lifetime takes precedence over global shared', () => {
+  const needle = new Needle([{ provide: Engine.name, useClass: Engine }], {
+    shared: true,
+    lifetime: 'transient',
+  });
+
+  const a1 = needle.get(Engine.name);
+  const a2 = needle.get(Engine.name);
+
+  expect(a1).not.toBe(a2);
+});
+
+test('Needle caches aliased instances with provider (lifetime: singleton)', () => {
+  const needle = new Needle([
+    { provide: TurboEngine.name, useClass: TurboEngine },
+    {
+      provide: Engine.name,
+      useExisting: TurboEngine.name,
+      lifetime: 'singleton',
+    },
+  ]);
+
+  const a1 = needle.get(Engine.name);
+  const a2 = needle.get(Engine.name);
+
+  expect(a1).toBe(a2);
+});
+
+test('Needle disables caching for aliased instances (lifetime: transient)', () => {
+  const needle = new Needle([
+    { provide: TurboEngine.name, useClass: TurboEngine },
+    {
+      provide: Engine.name,
+      useExisting: TurboEngine.name,
+      lifetime: 'transient',
+    },
+  ]);
+
+  const a1 = needle.get(Engine.name);
+  const a2 = needle.get(Engine.name);
+
+  expect(a1).not.toBe(a2);
+});
+
+test('Needle caches instances from factory provider (lifetime: singleton)', () => {
+  const needle = new Needle([
+    {
+      provide: Engine.name,
+      useFactory: () => new Engine(),
+      lifetime: 'singleton',
+    },
+  ]);
+
+  const a1 = needle.get(Engine.name);
+  const a2 = needle.get(Engine.name);
+
+  expect(a1).toBe(a2);
+});
+
+test('Needle disables caching for factory provider (lifetime: transient)', () => {
+  const needle = new Needle([
+    {
+      provide: Engine.name,
+      useFactory: () => new Engine(),
+      lifetime: 'transient',
+    },
+  ]);
+
+  const a1 = needle.get(Engine.name);
+  const a2 = needle.get(Engine.name);
+
+  expect(a1).not.toBe(a2);
+});
