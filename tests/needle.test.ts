@@ -1,4 +1,5 @@
 import type { Container } from '@armscye/container';
+import { expect, test } from 'vitest';
 
 import { Needle } from '../src/index.js';
 

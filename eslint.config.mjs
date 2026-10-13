@@ -37,18 +37,5 @@ export default defineConfig(
       '@typescript-eslint/unbound-method': 'off',
     },
   },
-  {
-    files: [
-      '**/*.test.ts',
-      '**/*.spec.ts',
-      'tests/**/*.ts',
-      '__tests__/**/*.ts',
-    ],
-    languageOptions: {
-      globals: {
-        ...globals.jest,
-      },
-    },
-  },
   eslintConfigPrettier,
 );
