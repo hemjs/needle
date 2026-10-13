@@ -167,8 +167,8 @@ importers:
   .:
     dependencies:
       '@armscye/container':
-        specifier: ^0.7.0
-        version: 0.7.0
+        specifier: ^0.8.0
+        version: 0.8.0
       '@armscye/core':
         specifier: ^0.4.3
         version: 0.4.3
@@ -245,11 +245,16 @@ packages:
     resolution: {integrity: sha512-9ytjzGwxjm9Uz7I9avfbt5vlQt6uk9uRRESzJjqrznl6WKvI6dwYTo+vJ3U02Wrq/mR3iql/PzhvHhKdJIAjDQ==}
     engines: {node: '>=20'}
 
-  '@armscye/container@0.7.0':
-    resolution: {integrity: sha512-AVxL3aVHrs4cb7NwvZZqJeDN5KWs2aRg7fLr2k48J5O9iHxPFfeq7jj3EFw/Amcn0zzokRFFDFo7iLE8zIE+Rg==}
+  '@armscye/container@0.8.0':
+    resolution: {integrity: sha512-V/5MZHedjCZSF6V45hyuj726WX9rTK3VGmmJTqnJOjXDIsVXJvggU4xkSvoTcMohwPIsok9kr0IydOoifW2A0g==}
+    engines: {node: '>=20.19.0'}
 
   '@armscye/core@0.4.3':
     resolution: {integrity: sha512-6JEZqK8sQp5tP3vRKicP/YsMN9Q40ejDUaknH0Apmt4FaeTQHHeBhX9JCDfRWsyfQ2m1aAtLiAjnQWL1r/7PCQ==}
+
+  '@armscye/core@0.4.4':
+    resolution: {integrity: sha512-2jyuHhbDLAF60hmaOKF4RTVBbz/PWGWoyP1+4rWAydamqVkohnO8E2t8Jzt42ZsvmhFlTRu1ahU/kfn6ugheiA==}
+    engines: {node: '>=20.19.0'}
 
   '@babel/code-frame@7.29.7':
     resolution: {integrity: sha512-Aup7aUOfpbAUg2ROOJN6Iw5f9DMBlzu0mIkm/malLQFN/YQgO48wCj0Kxa3sEHJvPVFg7siR+qRInwXd2qhQKw==}
@@ -2292,11 +2297,13 @@ snapshots:
       typescript: 5.6.1-rc
       validate-npm-package-name: 5.0.1
 
-  '@armscye/container@0.7.0':
+  '@armscye/container@0.8.0':
     dependencies:
-      '@armscye/core': 0.4.3
+      '@armscye/core': 0.4.4
 
   '@armscye/core@0.4.3': {}
+
+  '@armscye/core@0.4.4': {}
 
   '@babel/code-frame@7.29.7':
     dependencies:

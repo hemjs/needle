@@ -46,7 +46,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@armscye/container": "^0.7.0",
+    "@armscye/container": "^0.8.0",
     "@armscye/core": "^0.4.3"
   },
   "devDependencies": {
