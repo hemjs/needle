@@ -47,7 +47,7 @@
   },
   "dependencies": {
     "@armscye/container": "^0.7.0",
-    "@armscye/core": "^0.4.3"
+    "@armscye/core": "^0.5.0"
   },
   "devDependencies": {
     "@arethetypeswrong/cli": "0.18.5",
