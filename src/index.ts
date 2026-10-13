@@ -1,1 +1,1 @@
-export * from './needle';
+export * from './needle.js';

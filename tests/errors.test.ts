@@ -1,4 +1,6 @@
-import { NeedleError } from '../src/errors';
+import { describe, expect, it } from 'vitest';
+
+import { NeedleError } from '../src/errors.js';
 
 describe('NeedleError', () => {
   it('Error', () => {

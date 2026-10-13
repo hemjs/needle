@@ -1,10 +1,74 @@
 {
-  "semanticCommits": true,
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    ":dependencyDashboard",
+    ":semanticCommits",
+    ":semanticCommitTypeAll(chore)",
+    ":semanticCommitScope(deps)"
+  ],
+  "timezone": "Africa/Nairobi",
+  "schedule": ["before 6am on monday"],
+  "prConcurrentLimit": 10,
+  "lockFileMaintenance": {
+    "enabled": true,
+    "schedule": ["before 6am on monday"],
+    "automerge": true
+  },
   "packageRules": [
     {
-      "depTypeList": ["devDependencies"],
+      "description": "Pin devDependencies to exact versions.",
+      "matchDepTypes": ["devDependencies"],
+      "rangeStrategy": "pin"
+    },
+    {
+      "description": "Keep published ranges, but raise their floor on update.",
+      "matchDepTypes": ["dependencies", "peerDependencies"],
+      "rangeStrategy": "bump"
+    },
+    {
+      "description": "Automerge minor and patch devDependency updates once CI passes.",
+      "matchDepTypes": ["devDependencies"],
+      "matchUpdateTypes": ["minor", "patch", "pin", "digest"],
       "automerge": true
+    },
+    {
+      "description": "Major updates always need a manual review.",
+      "matchUpdateTypes": ["major"],
+      "automerge": false,
+      "addLabels": ["major-update"]
+    },
+    {
+      "description": "The supported Node.js range is a deliberate choice, not a dependency.",
+      "matchDepTypes": ["engines"],
+      "matchPackageNames": ["node"],
+      "enabled": false
+    },
+    {
+      "description": "typescript-eslint only supports typescript <6.1.0; hold TypeScript until it catches up.",
+      "matchPackageNames": ["typescript"],
+      "allowedVersions": "<6.1.0"
+    },
+    {
+      "description": "Do not bump the Node.js version used for development.",
+      "matchManagers": ["nvm"],
+      "enabled": false
+    },
+    {
+      "groupName": "typescript-eslint",
+      "matchPackageNames": ["typescript-eslint", "@typescript-eslint/**"]
+    },
+    {
+      "groupName": "commitlint",
+      "matchPackageNames": ["@commitlint/**"]
+    },
+    {
+      "groupName": "vitest",
+      "matchPackageNames": ["vitest", "@vitest/**"]
+    },
+    {
+      "groupName": "release-it",
+      "matchPackageNames": ["release-it", "@release-it/**"]
     }
-  ],
-  "extends": ["config:base"]
+  ]
 }

@@ -1,27 +1,19 @@
+// @ts-check
 import eslint from '@eslint/js';
-import eslintConfigPrettier from 'eslint-config-prettier/flat';
-import { defineConfig } from 'eslint/config';
+import prettier from 'eslint-config-prettier/flat';
+import { defineConfig, globalIgnores } from 'eslint/config';
 import globals from 'globals';
 import tseslint from 'typescript-eslint';
 
 export default defineConfig(
+  globalIgnores(['dist/', 'coverage/', 'CHANGELOG.md']),
+  eslint.configs.recommended,
+  tseslint.configs.recommendedTypeChecked,
   {
-    ignores: ['dist/**', 'coverage/**'],
-  },
-  {
-    files: ['**/*.ts'],
-    extends: [
-      eslint.configs.recommended,
-      ...tseslint.configs.recommendedTypeChecked,
-    ],
     languageOptions: {
-      ecmaVersion: 'latest',
-      sourceType: 'module',
-      globals: {
-        ...globals.nodeBuiltin,
-      },
+      globals: globals.nodeBuiltin,
       parserOptions: {
-        projectService: true,
+        projectService: { allowDefaultProject: ['*.js'] },
         tsconfigRootDir: import.meta.dirname,
       },
     },
@@ -38,17 +30,8 @@ export default defineConfig(
     },
   },
   {
-    files: [
-      '**/*.test.ts',
-      '**/*.spec.ts',
-      'tests/**/*.ts',
-      '__tests__/**/*.ts',
-    ],
-    languageOptions: {
-      globals: {
-        ...globals.jest,
-      },
-    },
+    files: ['**/*.js'],
+    extends: [tseslint.configs.disableTypeChecked],
   },
-  eslintConfigPrettier,
+  prettier,
 );

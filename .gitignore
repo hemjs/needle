@@ -1,18 +1,11 @@
-# dependencies
-/node_modules
-
-# IDE
-/.idea
-/.awcache
-/.vscode
-
-# misc
-npm-debug.log
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+*.tgz
+.env
+.env.*
 .DS_Store
-
-# tests
-/coverage
-/.nyc_output
-
-# dist
-dist
+*.log
+.idea/
+.vscode/

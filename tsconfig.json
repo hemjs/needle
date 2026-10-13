@@ -1,15 +1,25 @@
 {
   "compilerOptions": {
-    "module": "commonjs",
-    "declaration": true,
+    "target": "ES2023",
+    "lib": ["ES2023"],
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "moduleDetection": "force",
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true,
+
     "strict": true,
-    "removeComments": false,
-    "noLib": false,
-    "target": "ES2021",
-    "sourceMap": false,
-    "outDir": "./dist",
+    "exactOptionalPropertyTypes": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+
     "rootDir": ".",
+    "types": ["node"],
     "skipLibCheck": true,
-    "types": ["jest", "node"]
-  }
+    "forceConsistentCasingInFileNames": true,
+    "noEmit": true
+  },
+  "include": ["src", "tests", "*.ts"]
 }

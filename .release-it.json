@@ -1,15 +1,34 @@
 {
+  "$schema": "./node_modules/release-it/schema/release-it.json",
   "git": {
-    "commitMessage": "chore(): release v${version}"
+    "requireBranch": "main",
+    "requireCleanWorkingDir": true,
+    "commitMessage": "chore(release): v${version}",
+    "tagAnnotation": "Release v${version}"
   },
   "github": {
-    "release": true
+    "release": true,
+    "releaseName": "v${version}"
   },
   "npm": {
     "publish": true
   },
   "hooks": {
-    "before:init": ["npm run test"],
-    "after:bump": ["npm run prerelease"]
+    "before:init": [
+      "pnpm run lint",
+      "pnpm run format:check",
+      "pnpm run typecheck",
+      "pnpm run test",
+      "pnpm run check:package"
+    ]
+  },
+  "plugins": {
+    "@release-it/conventional-changelog": {
+      "preset": {
+        "name": "conventionalcommits"
+      },
+      "infile": "CHANGELOG.md",
+      "header": "# Changelog"
+    }
   }
 }

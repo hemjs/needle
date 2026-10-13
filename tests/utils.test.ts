@@ -1,4 +1,6 @@
-import { isPlainObject, stringify } from '../src/utils';
+import { describe, expect, it } from 'vitest';
+
+import { isPlainObject, stringify } from '../src/utils.js';
 
 function foo() {}
 

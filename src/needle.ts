@@ -1,4 +1,4 @@
-import {
+import type {
   ClassProvider,
   Container,
   ExistingProvider,
@@ -9,7 +9,7 @@ import {
   ProviderToken,
   ValueProvider,
 } from '@armscye/container';
-import { NoArgument, Type } from '@armscye/core';
+import type { NoArgument, Type } from '@armscye/core';
 
 import {
   CyclicAliasError,
@@ -19,7 +19,7 @@ import {
   InvalidProviderError,
   ProviderNotFoundError,
   ServiceNotCreatedError,
-} from './errors';
+} from './errors.js';
 
 export interface NeedleOptions {
   shared?: boolean;

@@ -16,6 +16,8 @@
 
 ## Installation
 
+Needle is published as an ES module and requires Node.js 22.12 or later.
+
 Install with npm:
 
 ```sh
@@ -26,6 +28,12 @@ Install with yarn:
 
 ```sh
 yarn add @hemjs/needle
+```
+
+Install with pnpm:
+
+```sh
+pnpm add @hemjs/needle
 ```
 
 ## Quick start

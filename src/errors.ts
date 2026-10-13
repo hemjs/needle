@@ -1,6 +1,6 @@
-import { ProviderToken } from '@armscye/container';
+import type { ProviderToken } from '@armscye/container';
 
-import { isPlainObject, stringify } from './utils';
+import { isPlainObject, stringify } from './utils.js';
 
 export class NeedleError extends Error {
   constructor(message: string) {
