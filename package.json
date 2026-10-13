@@ -28,18 +28,21 @@
     "node": ">=22.12.0"
   },
   "scripts": {
-    "prebuild": "rimraf dist",
-    "build": "tsc -p tsconfig.build.json",
-    "format": "prettier --write \"src/**/*.ts\" \"tests/**/*.ts\"",
-    "lint": "eslint \"{src,tests}/**/*.ts\" --fix",
-    "lint:package": "publint && attw --pack . --profile esm-only",
-    "typecheck": "tsc --noEmit",
+    "build": "npm run clean && tsc -p tsconfig.build.json",
+    "check:package": "npm run build && publint && attw --pack . --profile esm-only",
+    "clean": "rimraf dist",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "prepack": "npm run build",
+    "prepare": "husky",
+    "release": "release-it",
+    "renovate:validate": "npx --yes --package=renovate renovate-config-validator --strict",
     "test": "vitest run",
     "test:cov": "vitest run --coverage",
     "test:watch": "vitest",
-    "prerelease": "npm run prebuild && npm run build",
-    "release": "release-it",
-    "prepare": "husky"
+    "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
     "@armscye/container": "^0.7.0",
@@ -50,6 +53,7 @@
     "@commitlint/cli": "21.2.3",
     "@commitlint/config-conventional": "21.2.3",
     "@eslint/js": "10.0.1",
+    "@release-it/conventional-changelog": "12.0.2",
     "@types/node": "24.19.0",
     "@vitest/coverage-v8": "5.0.4",
     "eslint": "10.11.0",
@@ -59,7 +63,7 @@
     "lint-staged": "17.6.0",
     "prettier": "3.9.9",
     "publint": "0.3.25",
-    "release-it": "21.1.0",
+    "release-it": "21.1.1",
     "rimraf": "6.1.3",
     "typescript": "6.0.3",
     "typescript-eslint": "8.71.0",
@@ -75,11 +79,5 @@
   },
   "publishConfig": {
     "access": "public"
-  },
-  "lint-staged": {
-    "*.ts": [
-      "prettier --write",
-      "eslint --fix"
-    ]
   }
 }

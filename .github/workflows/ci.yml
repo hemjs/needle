@@ -4,6 +4,7 @@ on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -20,27 +21,49 @@ jobs:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
-          node-version: 24
+          node-version-file: .nvmrc
           cache: npm
       - run: npm ci
-      - run: npx prettier --check .
-      - run: npx eslint .
+      - run: npm run lint
+      - run: npm run format:check
       - run: npm run typecheck
-      - run: npm run build
-      - run: npm run lint:package
 
   test:
-    name: Test (Node ${{ matrix.node-version }})
+    name: Test (Node ${{ matrix.node }})
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        node-version: [22, 24, 26]
+        # The oldest supported version (engines.node), then each newer line.
+        node: ['22.12.0', '24', '26']
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version: ${{ matrix.node }}
           cache: npm
       - run: npm ci
       - run: npm run test:cov
+
+  package:
+    name: Package
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      # Packs the tarball (building first) and checks what consumers get.
+      - run: npm run check:package
+
+  renovate-config:
+    name: Renovate config
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+      - run: npm run renovate:validate
