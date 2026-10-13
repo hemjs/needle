@@ -71,3 +71,14 @@ jobs:
         with:
           node-version-file: .nvmrc
       - run: pnpm run renovate:validate
+
+  # The single check to require on main, so job and matrix names can change
+  # without touching the branch ruleset.
+  ci-ok:
+    name: CI OK
+    if: always()
+    needs: [lint, test, package, renovate-config]
+    runs-on: ubuntu-latest
+    steps:
+      - if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') || contains(needs.*.result, 'skipped')
+        run: exit 1
