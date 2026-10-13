@@ -15,11 +15,11 @@
   },
   "hooks": {
     "before:init": [
-      "npm run lint",
-      "npm run format:check",
-      "npm run typecheck",
-      "npm run test",
-      "npm run check:package"
+      "pnpm run lint",
+      "pnpm run format:check",
+      "pnpm run typecheck",
+      "pnpm run test",
+      "pnpm run check:package"
     ]
   },
   "plugins": {

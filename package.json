@@ -24,21 +24,22 @@
   "files": [
     "dist"
   ],
+  "packageManager": "pnpm@12.11.2",
   "engines": {
     "node": ">=22.12.0"
   },
   "scripts": {
-    "build": "npm run clean && tsc -p tsconfig.build.json",
-    "check:package": "npm run build && publint && attw --pack . --profile esm-only",
+    "build": "pnpm run clean && tsc -p tsconfig.build.json",
+    "check:package": "pnpm run build && publint && attw --pack . --profile esm-only",
     "clean": "rimraf dist",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "prepack": "npm run build",
+    "prepack": "pnpm run build",
     "prepare": "husky",
     "release": "release-it",
-    "renovate:validate": "npx --yes --package=renovate renovate-config-validator --strict",
+    "renovate:validate": "pnpm dlx --allow-build=re2 --package=renovate renovate-config-validator --strict",
     "test": "vitest run",
     "test:cov": "vitest run --coverage",
     "test:watch": "vitest",

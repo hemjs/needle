@@ -30,6 +30,12 @@ Install with yarn:
 yarn add @hemjs/needle
 ```
 
+Install with pnpm:
+
+```sh
+pnpm add @hemjs/needle
+```
+
 ## Quick start
 
 ```tsx
