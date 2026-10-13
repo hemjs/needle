@@ -1,4 +1,4 @@
-import { NeedleError } from '../src/errors';
+import { NeedleError } from '../src/errors.js';
 
 describe('NeedleError', () => {
   it('Error', () => {

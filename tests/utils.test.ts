@@ -1,4 +1,4 @@
-import { isPlainObject, stringify } from '../src/utils';
+import { isPlainObject, stringify } from '../src/utils.js';
 
 function foo() {}
 

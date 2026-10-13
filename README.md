@@ -16,6 +16,8 @@
 
 ## Installation
 
+Needle is published as an ES module and requires Node.js 22.12 or later.
+
 Install with npm:
 
 ```sh

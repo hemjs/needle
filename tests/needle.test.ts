@@ -1,6 +1,6 @@
-import { Container } from '@armscye/container';
+import type { Container } from '@armscye/container';
 
-import { Needle } from '../src';
+import { Needle } from '../src/index.js';
 
 class Engine {}
 

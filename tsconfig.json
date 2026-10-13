@@ -1,15 +1,18 @@
 {
   "compilerOptions": {
-    "module": "commonjs",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "target": "ES2023",
+    "lib": ["ES2023"],
     "declaration": true,
     "strict": true,
+    "verbatimModuleSyntax": true,
     "removeComments": false,
-    "noLib": false,
-    "target": "ES2021",
     "sourceMap": false,
     "outDir": "./dist",
     "rootDir": ".",
     "skipLibCheck": true,
     "types": ["jest", "node"]
-  }
+  },
+  "include": ["src/**/*", "tests/**/*"]
 }
