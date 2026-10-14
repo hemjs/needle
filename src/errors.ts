@@ -34,6 +34,12 @@ export class CyclicDependencyError extends NeedleError {
   }
 }
 
+export class ProviderOverrideError extends NeedleError {
+  constructor(token: ProviderToken) {
+    super(PROVIDER_OVERRIDE`${stringify(token)}`);
+  }
+}
+
 export class InvalidClassError extends NeedleError {
   constructor(value: any) {
     super(INVALID_CLASS`${stringify(value)}`);
@@ -82,6 +88,9 @@ const CYCLIC_ALIAS = (text: TemplateStringsArray, cycle: string) =>
 
 const CYCLIC_DEPENDENCY = (text: TemplateStringsArray, path: string) =>
   `Circular dependency detected: ${path}`;
+
+const PROVIDER_OVERRIDE = (text: TemplateStringsArray, token: string) =>
+  `Cannot replace the provider for "${token}"; it has already been resolved. Pass { allowOverride: true } to allow this.`;
 
 const INVALID_CLASS = (text: TemplateStringsArray, name: string) =>
   `Unable to instantiate class (${name} is not constructable).`;
