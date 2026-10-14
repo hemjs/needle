@@ -318,6 +318,14 @@ test('Needle throws for invalid classes', () => {
   ).toThrow('Unable to instantiate class (blah is not constructable).');
 });
 
+test('Needle throws for non-constructable functions', () => {
+  const createEngine = () => new Engine();
+
+  expect(
+    () => new Needle([{ provide: Engine.name, useClass: <any>createEngine }]),
+  ).toThrow('Unable to instantiate class (createEngine is not constructable).');
+});
+
 test('Needle throws for invalid class constructors', () => {
   expect(() => new Needle([{ provide: Car.name, useClass: <any>Car }])).toThrow(
     'Invalid class constructor "Car"; expected a defult (no-argument) constructor.',

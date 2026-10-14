@@ -208,7 +208,7 @@ export class Needle implements Container {
   }
 
   isNewable(type: Type<any>): boolean {
-    return typeof type === 'function' && type.prototype !== 'undefined';
+    return typeof type === 'function' && typeof type.prototype !== 'undefined';
   }
 
   makeRecord<T = any>(factory: Factory<T>, lifetime?: Lifetime) {
