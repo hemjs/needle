@@ -73,7 +73,7 @@ export const INVALID_CLASS = (text: TemplateStringsArray, name: string) =>
   `Unable to instantiate class (${name} is not constructable).`;
 
 const INVALID_CONSTRUCTOR = (text: TemplateStringsArray, name: string) =>
-  `Invalid class constructor "${name}"; expected a defult (no-argument) constructor.`;
+  `Invalid class constructor "${name}"; expected a default (no-argument) constructor.`;
 
 const INVALID_FACTORY = (text: TemplateStringsArray, value: string) =>
   `Invalid factory provided; expected a function, but "${value}" was received.`;
