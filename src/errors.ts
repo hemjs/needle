@@ -3,8 +3,9 @@ import type { ProviderToken } from '@armscye/container';
 import { isPlainObject, stringify } from './utils.js';
 
 export class NeedleError extends Error {
-  constructor(message: string) {
-    super(message);
+  constructor(message: string, options?: ErrorOptions) {
+    super(message, options);
+    this.name = new.target.name;
   }
 }
 
@@ -67,8 +68,12 @@ export class InvalidProviderError extends NeedleError {
 }
 
 export class ServiceNotCreatedError extends NeedleError {
-  constructor(token: ProviderToken, message: string) {
-    super(SERVICE_NOT_CREATED(stringify(token), message));
+  constructor(path: ProviderToken[], cause: unknown) {
+    const token = stringify(path[path.length - 1]);
+    const route =
+      path.length > 1 ? ` (${path.map(stringify).join(' -> ')})` : '';
+    const reason = cause instanceof Error ? cause.message : String(cause);
+    super(SERVICE_NOT_CREATED(token, route, reason), { cause });
   }
 }
 
@@ -78,7 +83,7 @@ const CYCLIC_ALIAS = (text: TemplateStringsArray, cycle: string) =>
 const CYCLIC_DEPENDENCY = (text: TemplateStringsArray, path: string) =>
   `Circular dependency detected: ${path}`;
 
-export const INVALID_CLASS = (text: TemplateStringsArray, name: string) =>
+const INVALID_CLASS = (text: TemplateStringsArray, name: string) =>
   `Unable to instantiate class (${name} is not constructable).`;
 
 const INVALID_CONSTRUCTOR = (text: TemplateStringsArray, name: string) =>
@@ -93,6 +98,6 @@ const PROVIDER_NOT_FOUND = (text: TemplateStringsArray, token: string) =>
 const INVALID_PROVIDER = (text: TemplateStringsArray, detail: string) =>
   `Invalid provider definition detected; only instances of Provider are allowed, got: [${detail}].`;
 
-const SERVICE_NOT_CREATED = (token: string, message: string) => {
-  return `Service for "${token}" could not be created. Reason: ${message}`;
+const SERVICE_NOT_CREATED = (token: string, route: string, reason: string) => {
+  return `Service for "${token}" could not be created${route}. Reason: ${reason}`;
 };

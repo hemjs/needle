@@ -158,11 +158,18 @@ export class Needle implements Container {
     let object: any;
     try {
       object = factory(this);
-    } catch (error: any) {
-      if (error instanceof CyclicDependencyError) {
+    } catch (error) {
+      if (
+        error instanceof CyclicDependencyError ||
+        error instanceof ServiceNotCreatedError
+      ) {
         throw error;
       }
-      throw new ServiceNotCreatedError(token, error.message);
+      const path = [...this.resolving];
+      if (path[path.length - 1] !== token) {
+        path.push(token);
+      }
+      throw new ServiceNotCreatedError(path, error);
     }
     return object;
   }

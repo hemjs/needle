@@ -7,4 +7,8 @@ describe('NeedleError', () => {
     const message = 'Error message';
     expect(new NeedleError(message).message).toEqual(message);
   });
+
+  it('is named after its class', () => {
+    expect(new NeedleError('Error message').name).toBe('NeedleError');
+  });
 });
