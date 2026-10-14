@@ -9,7 +9,6 @@
 - [Introduction](#introduction)
 - [Features](#features)
 - [Container](#container)
-- [Overriding providers](#overriding-providers)
 - [Lifetime](#lifetime)
 - [Providers](#providers)
 - [Best practices](#best-practices)
@@ -202,29 +201,6 @@ Once providers are registered, retrieve instances using the `get` method and the
 ```tsx
 const loggerService = container.get<LoggerService>(LoggerService.name);
 const loggerService = container.get<LoggerService>('LOGGER');
-```
-
-### Overriding providers
-
-Registering a provider for a token that already has one replaces it; the last registration wins. This works until the token is first resolved. After that, other services may already hold the instance it produced, so replacing the provider would leave them with the old one. Needle refuses the replacement with a `ProviderOverrideError`:
-
-```tsx
-const container = new Needle([
-  { provide: LoggerService.name, useClass: LoggerService },
-]);
-
-container.get(LoggerService.name);
-
-// Throws ProviderOverrideError: the logger has already been resolved.
-container.addProvider({ provide: LoggerService.name, useClass: FileLogger });
-```
-
-A token counts as resolved once `get` has returned it, directly, through an alias, or as a dependency of another service. This applies to every lifetime and to value providers. Replacing a provider before its token is first resolved, such as in test setup, is always allowed.
-
-To allow replacing resolved providers anyway, set the `allowOverride` option. Services that were already created keep the instance they received:
-
-```tsx
-const container = new Needle(providers, { allowOverride: true });
 ```
 
 ### Lifetime
