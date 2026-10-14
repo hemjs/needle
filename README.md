@@ -296,6 +296,26 @@ Needle prioritizes error handling throughout the dependency resolution process, 
 - If a service's constructor throws an error during object creation, Needle propagates the error along with context that identifies the service involved and the reason for the failure.
 - If a circular dependency is detected, it throws an error pinpointing the involved services and the circular path.
 
+For example, two factories that each need the other while being created:
+
+```tsx
+const container = new Needle([
+  { provide: 'a', useFactory: (c: Container) => new A(c.get('b')) },
+  { provide: 'b', useFactory: (c: Container) => new B(c.get('a')) },
+]);
+
+container.get('a'); // Error: Circular dependency detected: a -> b -> a
+```
+
+To break a cycle, defer one side of it: resolve the dependency when it is first used rather than while the service is being created.
+
+```tsx
+const container = new Needle([
+  { provide: 'a', useFactory: (c: Container) => new A(() => c.get('b')) },
+  { provide: 'b', useFactory: (c: Container) => new B(c.get('a')) },
+]);
+```
+
 ## Providers
 
 A Needle container manages one or more providers. These providers tell the container how to create and manage the services your application needs to function.They are created based on provider definitions supplied to the container.
