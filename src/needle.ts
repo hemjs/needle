@@ -44,25 +44,14 @@ export class Needle implements Container {
   initialize(providers: Provider[]) {
     let newAlias = false;
     for (const provider of providers) {
-      if (this.isValueProvider(provider)) {
-        this.services.set(provider.provide, provider.useValue);
-      } else if (this.isClassProvider(provider)) {
-        const { provide, useClass, lifetime } = provider;
-        const factory = this.classToFactory(useClass);
-        this.records.set(provide, this.makeRecord(factory, lifetime));
-      } else if (this.isFactoryProvider(provider)) {
-        const { provide, useFactory: factory, lifetime } = provider;
-        this.records.set(provide, this.makeRecord(factory, lifetime));
-      } else if (this.isExistingProvider(provider)) {
-        this.aliases.set(provider.provide, provider.useExisting);
-        newAlias = true;
-      } else {
-        throw new InvalidProviderError(provider);
-      }
+      this.register(provider);
+      newAlias ||= this.isExistingProvider(provider);
     }
 
     if (newAlias) {
-      this.mapAliasesToTargets();
+      for (const alias of this.aliases.keys()) {
+        this.resolveAlias(alias);
+      }
     }
 
     this.isInitialized = true;
@@ -74,8 +63,7 @@ export class Needle implements Container {
       return this.services.get(token) as T;
     }
 
-    // An alias follows the lifetime of the provider it resolves to.
-    const resolvedToken = this.aliases.get(token) ?? token;
+    const resolvedToken = this.resolveAlias(token);
 
     if (this.services.has(resolvedToken)) {
       return this.services.get(resolvedToken) as T;
@@ -92,32 +80,43 @@ export class Needle implements Container {
   }
 
   has(token: ProviderToken): boolean {
-    if (this.services.has(token) || this.records.has(token)) {
-      return true;
-    }
-    const resolvedToken = this.aliases.get(token) ?? token;
-    if (resolvedToken !== token) {
-      return this.has(resolvedToken);
-    }
-    return false;
+    const resolvedToken = this.resolveAlias(token);
+    return this.services.has(resolvedToken) || this.records.has(resolvedToken);
   }
 
   addProvider(provider: Provider) {
+    this.register(provider);
+    if (this.isExistingProvider(provider)) {
+      this.resolveAlias(provider.provide);
+    }
+    return this;
+  }
+
+  register(provider: Provider): void {
     if (this.isValueProvider(provider)) {
+      this.unregister(provider.provide);
       this.services.set(provider.provide, provider.useValue);
     } else if (this.isClassProvider(provider)) {
       const { provide, useClass, lifetime } = provider;
       const factory = this.classToFactory(useClass);
+      this.unregister(provide);
       this.records.set(provide, this.makeRecord(factory, lifetime));
     } else if (this.isFactoryProvider(provider)) {
       const { provide, useFactory: factory, lifetime } = provider;
+      this.unregister(provide);
       this.records.set(provide, this.makeRecord(factory, lifetime));
     } else if (this.isExistingProvider(provider)) {
-      this.mapAliasToTarget(provider.provide, provider.useExisting);
+      this.unregister(provider.provide);
+      this.aliases.set(provider.provide, provider.useExisting);
     } else {
       throw new InvalidProviderError(provider);
     }
-    return this;
+  }
+
+  unregister(token: ProviderToken): void {
+    this.services.delete(token);
+    this.records.delete(token);
+    this.aliases.delete(token);
   }
 
   isValueProvider(provider: Provider): provider is ValueProvider {
@@ -161,40 +160,17 @@ export class Needle implements Container {
     return record;
   }
 
-  mapAliasToTarget(alias: ProviderToken, target: ProviderToken): void {
-    this.aliases.set(alias, target);
-    this.mapAliasesToTargets();
-  }
-
-  mapAliasesToTargets(): void {
-    const tagged = new Map<ProviderToken, boolean>();
-    for (const alias of this.aliases.keys()) {
-      if (tagged.has(alias)) {
-        continue;
+  resolveAlias(token: ProviderToken): ProviderToken {
+    const seen = new Set<ProviderToken>();
+    let cursor = token;
+    while (this.aliases.has(cursor)) {
+      if (seen.has(cursor)) {
+        throw new CyclicAliasError(cursor, this.aliases);
       }
-      let tCursor = this.aliases.get(alias)!;
-      let aCursor = alias;
-      if (aCursor === tCursor) {
-        throw new CyclicAliasError(alias, this.aliases);
-      }
-      if (!this.aliases.has(tCursor)) {
-        continue;
-      }
-      const stack = [];
-      while (this.aliases.has(tCursor)) {
-        stack.push(aCursor);
-        if (stack.includes(tCursor)) {
-          throw new CyclicAliasError(tCursor, this.aliases);
-        }
-        aCursor = tCursor;
-        tCursor = this.aliases.get(tCursor)!;
-      }
-      tagged.set(aCursor, true);
-      for (const alias of stack) {
-        this.aliases.set(alias, tCursor);
-        tagged.set(alias, true);
-      }
+      seen.add(cursor);
+      cursor = this.aliases.get(cursor)!;
     }
+    return cursor;
   }
 
   classToFactory(type: NoArgument<any>): () => any {

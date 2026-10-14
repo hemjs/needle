@@ -253,6 +253,55 @@ test('Needle prioritizes the last provider for a given token', () => {
   expect(needle.get(Engine.name)).toBeInstanceOf(TurboEngine);
 });
 
+test('Needle replaces a cached singleton when its provider is replaced', () => {
+  const needle = new Needle([{ provide: Engine.name, useClass: Engine }]);
+  needle.get(Engine.name);
+  needle.addProvider({ provide: Engine.name, useClass: TurboEngine });
+
+  expect(needle.get(Engine.name)).toBeInstanceOf(TurboEngine);
+});
+
+test('Needle replaces a value provider with a class provider', () => {
+  const needle = new Needle([
+    { provide: Engine.name, useValue: 'fake engine' },
+  ]);
+  needle.addProvider({ provide: Engine.name, useClass: Engine });
+
+  expect(needle.get(Engine.name)).toBeInstanceOf(Engine);
+});
+
+test('Needle replaces an alias with a later provider for the same token', () => {
+  const needle = new Needle([
+    { provide: TurboEngine.name, useClass: TurboEngine },
+    { provide: Engine.name, useExisting: TurboEngine.name },
+    { provide: Engine.name, useClass: Engine },
+  ]);
+
+  expect(needle.get(Engine.name)).not.toBeInstanceOf(TurboEngine);
+  expect(needle.get(Engine.name)).toBeInstanceOf(Engine);
+});
+
+test('Needle replaces a provider with a later alias for the same token', () => {
+  const needle = new Needle([
+    { provide: TurboEngine.name, useClass: TurboEngine },
+    { provide: Engine.name, useValue: 'fake engine' },
+  ]);
+  needle.addProvider({ provide: Engine.name, useExisting: TurboEngine.name });
+
+  expect(needle.get(Engine.name)).toBeInstanceOf(TurboEngine);
+});
+
+test('Needle follows an alias chain when a link in it is replaced', () => {
+  const needle = new Needle([
+    { provide: Engine.name, useClass: Engine },
+    { provide: TurboEngine.name, useExisting: Engine.name },
+    { provide: 'Turbo', useExisting: TurboEngine.name },
+  ]);
+  needle.addProvider({ provide: TurboEngine.name, useClass: TurboEngine });
+
+  expect(needle.get('Turbo')).toBeInstanceOf(TurboEngine);
+});
+
 test('Needle resolves chained dependencies correctly', () => {
   const needle = new Needle([
     {
