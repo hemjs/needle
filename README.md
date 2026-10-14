@@ -203,64 +203,6 @@ const loggerService = container.get<LoggerService>(LoggerService.name);
 const loggerService = container.get<LoggerService>('LOGGER');
 ```
 
-### Shared
-
-> **Deprecated:** The `shared` option is deprecated. Use [`lifetime`](#lifetime) instead.
-
-Needle container shares instances by default. This means that calling the `get` method multiple times for a given service will return the same instance. This promotes efficiency by conserving memory and potentially enhancing performance:
-
-```tsx
-const container = new Needle([
-  { provide: LoggerService.name, useClass: LoggerService },
-]);
-
-const obj1 = container.get<LoggerService>(LoggerService.name);
-const obj2 = container.get<LoggerService>(LoggerService.name);
-
-console.log(obj1 === obj2); // Output: true
-```
-
-However, occasionally you may want to create distinct instances for each request. To achieve this, you can use the `shared: false` option within a provider definition:
-
-```tsx
-const container = new Needle([
-  { provide: LoggerService.name, useClass: LoggerService, shared: false },
-]);
-
-const obj1 = container.get<LoggerService>(LoggerService.name);
-const obj2 = container.get<LoggerService>(LoggerService.name);
-
-console.log(obj1 === obj2); // Output: false
-```
-
-To disable sharing for all instances by default, set the `shared: false` option at the class level:
-
-```tsx
-const container = new Needle([
-  { provide: LoggerService.name, useClass: LoggerService },
-  { shared: false },
-]);
-
-const obj1 = container.get<LoggerService>(LoggerService.name);
-const obj2 = container.get<LoggerService>(LoggerService.name);
-
-console.log(obj1 === obj2); // Output: false
-```
-
-This approach can be helpful in specific scenarios where you want to ensure each instance is unique. To override this default for a specific provider, use the `shared: true` option within its definition:
-
-```tsx
-const container = new Needle([
-  { provide: LoggerService.name, useClass: LoggerService, shared: true },
-  { shared: false },
-]);
-
-const obj1 = container.get<LoggerService>(LoggerService.name);
-const obj2 = container.get<LoggerService>(LoggerService.name);
-
-console.log(obj1 === obj2); // Output: true
-```
-
 ### Lifetime
 
 The `lifetime` option controls whether a service instance is reused across resolutions or a new instance is created each time. It accepts two values:
@@ -453,6 +395,8 @@ const container = new Needle([
 const errorHandler1 = container.get<ErrorHandler>(ErrorHandler.name);
 const errorHandler2 = container.get<ErrorHandler>('ERROR_HANDLER');
 ```
+
+An alias has no lifetime of its own; it follows the [lifetime](#lifetime) of the provider it resolves to. Aliasing a `singleton` returns that same instance, while aliasing a `transient` provider creates a new instance on every resolution.
 
 Aliases can be particularly valuable in several situations, such as when:
 

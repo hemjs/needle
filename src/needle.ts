@@ -22,7 +22,6 @@ import {
 } from './errors.js';
 
 export interface NeedleOptions {
-  shared?: boolean;
   lifetime?: Lifetime;
 }
 
@@ -30,9 +29,9 @@ export class Needle implements Container {
   readonly services = new Map<ProviderToken, any>();
   readonly records = new Map<
     ProviderToken,
-    { factory: Factory; shared?: boolean }
+    { factory: Factory; lifetime: Lifetime }
   >();
-  readonly aliases = new Map<ProviderToken, { token: any; shared?: boolean }>();
+  readonly aliases = new Map<ProviderToken, ProviderToken>();
   isInitialized = false;
 
   constructor(
@@ -48,15 +47,14 @@ export class Needle implements Container {
       if (this.isValueProvider(provider)) {
         this.services.set(provider.provide, provider.useValue);
       } else if (this.isClassProvider(provider)) {
-        const { provide, useClass, shared, lifetime } = provider;
+        const { provide, useClass, lifetime } = provider;
         const factory = this.classToFactory(useClass);
-        this.records.set(provide, this.makeRecord(factory, shared, lifetime));
+        this.records.set(provide, this.makeRecord(factory, lifetime));
       } else if (this.isFactoryProvider(provider)) {
-        const { provide, useFactory: factory, shared, lifetime } = provider;
-        this.records.set(provide, this.makeRecord(factory, shared, lifetime));
+        const { provide, useFactory: factory, lifetime } = provider;
+        this.records.set(provide, this.makeRecord(factory, lifetime));
       } else if (this.isExistingProvider(provider)) {
-        const { provide, useExisting: token, shared, lifetime } = provider;
-        this.aliases.set(provide, this.makeAlias(token, shared, lifetime));
+        this.aliases.set(provider.provide, provider.useExisting);
         newAlias = true;
       } else {
         throw new InvalidProviderError(provider);
@@ -76,34 +74,18 @@ export class Needle implements Container {
       return this.services.get(token) as T;
     }
 
-    if (this.aliases.size === 0) {
-      const record = this.getRecord(token);
-      const object = this.doCreate(token, record.factory);
+    // An alias follows the lifetime of the provider it resolves to.
+    const resolvedToken = this.aliases.get(token) ?? token;
 
-      if (record.shared === true) {
-        this.services.set(token, object);
-      }
-
-      return object as T;
-    }
-
-    const alias = this.aliases.get(token);
-    const resolvedToken = alias?.token ?? token;
-
-    if (this.services.has(resolvedToken) && alias?.shared === true) {
-      this.services.set(token, this.services.get(resolvedToken));
+    if (this.services.has(resolvedToken)) {
       return this.services.get(resolvedToken) as T;
     }
 
     const record = this.getRecord(resolvedToken);
     const object = this.doCreate(resolvedToken, record.factory);
 
-    if (record.shared === true) {
+    if (record.lifetime === 'singleton') {
       this.services.set(resolvedToken, object);
-    }
-
-    if (this.aliases.has(token) && alias?.shared === true) {
-      this.services.set(token, object);
     }
 
     return object as T;
@@ -113,7 +95,7 @@ export class Needle implements Container {
     if (this.services.has(token) || this.records.has(token)) {
       return true;
     }
-    const resolvedToken = this.aliases.get(token)?.token ?? token;
+    const resolvedToken = this.aliases.get(token) ?? token;
     if (resolvedToken !== token) {
       return this.has(resolvedToken);
     }
@@ -124,20 +106,14 @@ export class Needle implements Container {
     if (this.isValueProvider(provider)) {
       this.services.set(provider.provide, provider.useValue);
     } else if (this.isClassProvider(provider)) {
-      const { provide, useClass, shared, lifetime } = provider;
+      const { provide, useClass, lifetime } = provider;
       const factory = this.classToFactory(useClass);
-      this.records.set(provide, this.makeRecord(factory, shared, lifetime));
+      this.records.set(provide, this.makeRecord(factory, lifetime));
     } else if (this.isFactoryProvider(provider)) {
-      const { provide, useFactory: factory, shared, lifetime } = provider;
-      this.records.set(provide, this.makeRecord(factory, shared, lifetime));
+      const { provide, useFactory: factory, lifetime } = provider;
+      this.records.set(provide, this.makeRecord(factory, lifetime));
     } else if (this.isExistingProvider(provider)) {
-      const {
-        useExisting: target,
-        provide: alias,
-        shared,
-        lifetime,
-      } = provider;
-      this.mapAliasToTarget(alias, target, shared, lifetime);
+      this.mapAliasToTarget(provider.provide, provider.useExisting);
     } else {
       throw new InvalidProviderError(provider);
     }
@@ -181,26 +157,21 @@ export class Needle implements Container {
     return record;
   }
 
-  mapAliasToTarget(
-    alias: ProviderToken,
-    target: ProviderToken,
-    shared: boolean | undefined,
-    lifetime?: Lifetime,
-  ): void {
+  mapAliasToTarget(alias: ProviderToken, target: ProviderToken): void {
     const nTarget = this.aliases.get(target) ?? target;
-    this.aliases.set(alias, this.makeAlias(nTarget, shared, lifetime));
-    if (alias === this.aliases.get(alias)?.token) {
+    this.aliases.set(alias, nTarget);
+    if (alias === this.aliases.get(alias)) {
       throw new CyclicAliasError(alias, this.aliases);
     }
   }
 
   mapAliasesToTargets(): void {
-    const tagged = new Map<any, any>();
+    const tagged = new Map<ProviderToken, boolean>();
     for (const alias of this.aliases.keys()) {
       if (tagged.has(alias)) {
         continue;
       }
-      let tCursor = this.aliases.get(alias)?.token;
+      let tCursor = this.aliases.get(alias)!;
       let aCursor = alias;
       if (aCursor === tCursor) {
         throw new CyclicAliasError(alias, this.aliases);
@@ -211,11 +182,11 @@ export class Needle implements Container {
       const stack = [];
       while (this.aliases.has(tCursor)) {
         stack.push(aCursor);
-        if (aCursor === this.aliases.get(tCursor)?.token) {
+        if (aCursor === this.aliases.get(tCursor)) {
           throw new CyclicAliasError(alias, this.aliases);
         }
         aCursor = tCursor;
-        tCursor = this.aliases.get(tCursor);
+        tCursor = this.aliases.get(tCursor)!;
       }
       tagged.set(aCursor, true);
       for (const alias of stack) {
@@ -240,37 +211,10 @@ export class Needle implements Container {
     return typeof type === 'function' && type.prototype !== 'undefined';
   }
 
-  makeAlias<T = any>(token: T, shared?: boolean, lifetime?: Lifetime) {
-    return {
-      token: token,
-      shared: this.isShared(shared, lifetime),
-    };
-  }
-
-  makeRecord<T = any>(
-    factory: Factory<T>,
-    shared?: boolean,
-    lifetime?: Lifetime,
-  ) {
+  makeRecord<T = any>(factory: Factory<T>, lifetime?: Lifetime) {
     return {
       factory: factory,
-      shared: this.isShared(shared, lifetime),
+      lifetime: lifetime ?? this.options.lifetime ?? 'singleton',
     };
-  }
-
-  isShared(shared?: boolean, lifetime?: Lifetime): boolean {
-    if (typeof lifetime === 'string') {
-      return lifetime === 'singleton';
-    }
-    if (typeof shared === 'boolean') {
-      return shared;
-    }
-    if (typeof this.options.lifetime === 'string') {
-      return this.options.lifetime === 'singleton';
-    }
-    if (typeof this.options.shared === 'boolean') {
-      return this.options.shared;
-    }
-    return true;
   }
 }
