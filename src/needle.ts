@@ -19,13 +19,11 @@ import {
   InvalidFactoryError,
   InvalidProviderError,
   ProviderNotFoundError,
-  ProviderOverrideError,
   ServiceNotCreatedError,
 } from './errors.js';
 
 export interface NeedleOptions {
   lifetime?: Lifetime;
-  allowOverride?: boolean;
 }
 
 export class Needle implements Container {
@@ -36,7 +34,6 @@ export class Needle implements Container {
   >();
   readonly aliases = new Map<ProviderToken, ProviderToken>();
   readonly resolving = new Set<ProviderToken>();
-  readonly requested = new Set<ProviderToken>();
   isInitialized = false;
 
   constructor(
@@ -64,14 +61,6 @@ export class Needle implements Container {
   }
 
   get<T>(token: ProviderToken): T {
-    const object = this.resolve<T>(token);
-    if (!this.requested.has(token)) {
-      this.markRequested(token);
-    }
-    return object;
-  }
-
-  resolve<T>(token: ProviderToken): T {
     if (this.services.has(token)) {
       return this.services.get(token) as T;
     }
@@ -120,22 +109,18 @@ export class Needle implements Container {
 
   register(provider: Provider): void {
     if (this.isValueProvider(provider)) {
-      this.assertOverridable(provider.provide);
       this.unregister(provider.provide);
       this.services.set(provider.provide, provider.useValue);
     } else if (this.isClassProvider(provider)) {
       const { provide, useClass, lifetime } = provider;
       const factory = this.classToFactory(useClass);
-      this.assertOverridable(provide);
       this.unregister(provide);
       this.records.set(provide, this.makeRecord(factory, lifetime));
     } else if (this.isFactoryProvider(provider)) {
       const { provide, useFactory: factory, lifetime } = provider;
-      this.assertOverridable(provide);
       this.unregister(provide);
       this.records.set(provide, this.makeRecord(factory, lifetime));
     } else if (this.isExistingProvider(provider)) {
-      this.assertOverridable(provider.provide);
       this.unregister(provider.provide);
       this.aliases.set(provider.provide, provider.useExisting);
     } else {
@@ -143,22 +128,7 @@ export class Needle implements Container {
     }
   }
 
-  assertOverridable(token: ProviderToken): void {
-    if (this.options.allowOverride !== true && this.requested.has(token)) {
-      throw new ProviderOverrideError(token);
-    }
-  }
-
-  markRequested(token: ProviderToken): void {
-    let cursor = token;
-    this.requested.add(cursor);
-    while (this.aliases.has(cursor)) {
-      cursor = this.aliases.get(cursor)!;
-      this.requested.add(cursor);
-    }
-  }
-
-  unregister(token: ProviderToken): void {
+  private unregister(token: ProviderToken): void {
     this.services.delete(token);
     this.records.delete(token);
     this.aliases.delete(token);

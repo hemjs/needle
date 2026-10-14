@@ -6,7 +6,6 @@ import {
   Needle,
   NeedleError,
   ProviderNotFoundError,
-  ProviderOverrideError,
   ServiceNotCreatedError,
 } from '../src/index.js';
 
@@ -260,10 +259,8 @@ test('Needle prioritizes the last provider for a given token', () => {
   expect(needle.get(Engine.name)).toBeInstanceOf(TurboEngine);
 });
 
-test('Needle replaces a cached singleton when overrides are allowed', () => {
-  const needle = new Needle([{ provide: Engine.name, useClass: Engine }], {
-    allowOverride: true,
-  });
+test('Needle replaces a cached singleton when its provider is replaced', () => {
+  const needle = new Needle([{ provide: Engine.name, useClass: Engine }]);
   needle.get(Engine.name);
   needle.addProvider({ provide: Engine.name, useClass: TurboEngine });
 
@@ -874,106 +871,4 @@ test('Needle allows deferred access between mutually dependent services', () => 
   const a = needle.get<{ b: () => { a: unknown } }>('a');
 
   expect(a.b().a).toBe(a);
-});
-
-const OVERRIDE_ERROR =
-  'Cannot replace the provider for "Engine"; it has already been resolved.';
-
-test('Needle refuses to replace a resolved singleton by default', () => {
-  const needle = new Needle([{ provide: Engine.name, useClass: Engine }]);
-  const engine = needle.get(Engine.name);
-
-  expect(() =>
-    needle.addProvider({ provide: Engine.name, useClass: TurboEngine }),
-  ).toThrow(ProviderOverrideError);
-  expect(() =>
-    needle.addProvider({ provide: Engine.name, useClass: TurboEngine }),
-  ).toThrow(OVERRIDE_ERROR);
-  expect(needle.get(Engine.name)).toBe(engine);
-});
-
-test('Needle refuses to replace resolved transient and value providers', () => {
-  const needle = new Needle([
-    { provide: Engine.name, useClass: Engine, lifetime: 'transient' },
-    { provide: 'config', useValue: { debug: true } },
-  ]);
-  needle.get(Engine.name);
-  needle.get('config');
-
-  expect(() =>
-    needle.addProvider({ provide: Engine.name, useValue: 'fake engine' }),
-  ).toThrow(OVERRIDE_ERROR);
-  expect(() =>
-    needle.addProvider({ provide: 'config', useValue: { debug: false } }),
-  ).toThrow(ProviderOverrideError);
-});
-
-test('Needle refuses to replace dependencies resolved by factories', () => {
-  const needle = new Needle([
-    { provide: Engine.name, useClass: Engine },
-    {
-      provide: Car.name,
-      useFactory: (c: Container) => new Car(c.get(Engine.name)),
-    },
-  ]);
-  needle.get(Car.name);
-
-  expect(() =>
-    needle.addProvider({ provide: Engine.name, useClass: TurboEngine }),
-  ).toThrow(OVERRIDE_ERROR);
-});
-
-test('Needle refuses to replace any link of a resolved alias chain', () => {
-  const needle = new Needle([
-    { provide: Engine.name, useClass: Engine },
-    { provide: TurboEngine.name, useExisting: Engine.name },
-    { provide: 'Turbo', useExisting: TurboEngine.name },
-  ]);
-  needle.get('Turbo');
-
-  for (const provide of ['Turbo', TurboEngine.name, Engine.name]) {
-    expect(() => needle.addProvider({ provide, useValue: 'other' })).toThrow(
-      ProviderOverrideError,
-    );
-  }
-});
-
-test('Needle applies the override guard to initialize', () => {
-  const needle = new Needle([{ provide: Engine.name, useClass: Engine }]);
-  needle.get(Engine.name);
-
-  expect(() =>
-    needle.initialize([{ provide: Engine.name, useClass: TurboEngine }]),
-  ).toThrow(OVERRIDE_ERROR);
-});
-
-test('Needle allows replacing providers that have not been resolved', () => {
-  const needle = new Needle([
-    { provide: Engine.name, useClass: Engine },
-    { provide: 'config', useValue: { debug: true } },
-  ]);
-  needle.get('config');
-  needle.addProvider({ provide: Engine.name, useClass: TurboEngine });
-
-  expect(needle.get(Engine.name)).toBeInstanceOf(TurboEngine);
-});
-
-test('Needle does not guard tokens whose resolution failed', () => {
-  const needle = new Needle([
-    { provide: BrokenEngine.name, useClass: BrokenEngine },
-  ]);
-  expect(() => needle.get('missing')).toThrow(ProviderNotFoundError);
-  expect(() => needle.get(BrokenEngine.name)).toThrow(ServiceNotCreatedError);
-
-  needle.addProvider({ provide: 'missing', useValue: 'found' });
-  needle.addProvider({ provide: BrokenEngine.name, useClass: Engine });
-
-  expect(needle.get('missing')).toBe('found');
-  expect(needle.get(BrokenEngine.name)).toBeInstanceOf(Engine);
-});
-
-test('Needle names the override error', () => {
-  expect(new ProviderOverrideError('Engine').name).toBe(
-    'ProviderOverrideError',
-  );
 });
