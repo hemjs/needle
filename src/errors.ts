@@ -11,19 +11,13 @@ export class NeedleError extends Error {
 export class CyclicAliasError extends NeedleError {
   constructor(
     alias: ProviderToken,
-    aliases: Map<
-      ProviderToken,
-      {
-        token: any;
-        shared?: boolean;
-      }
-    >,
+    aliases: Map<ProviderToken, ProviderToken>,
   ) {
     let cycle = stringify(alias);
     let cursor = alias;
 
-    while (aliases.has(cursor) && aliases.get(cursor)?.token !== alias) {
-      cursor = aliases.get(cursor)?.token;
+    while (aliases.has(cursor) && aliases.get(cursor) !== alias) {
+      cursor = aliases.get(cursor)!;
       cycle += ' -> ' + stringify(cursor);
     }
 
