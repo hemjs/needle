@@ -13,6 +13,7 @@ import type { NoArgument, Type } from '@armscye/core';
 
 import {
   CyclicAliasError,
+  CyclicDependencyError,
   InvalidClassError,
   InvalidConstructorError,
   InvalidFactoryError,
@@ -32,6 +33,7 @@ export class Needle implements Container {
     { factory: Factory; lifetime: Lifetime }
   >();
   readonly aliases = new Map<ProviderToken, ProviderToken>();
+  readonly resolving = new Set<ProviderToken>();
   isInitialized = false;
 
   constructor(
@@ -70,7 +72,20 @@ export class Needle implements Container {
     }
 
     const record = this.getRecord(resolvedToken);
-    const object = this.doCreate(resolvedToken, record.factory);
+
+    if (this.resolving.has(resolvedToken)) {
+      const path = [...this.resolving];
+      const cycle = path.slice(path.indexOf(resolvedToken));
+      throw new CyclicDependencyError([...cycle, resolvedToken]);
+    }
+
+    this.resolving.add(resolvedToken);
+    let object: any;
+    try {
+      object = this.doCreate(resolvedToken, record.factory);
+    } finally {
+      this.resolving.delete(resolvedToken);
+    }
 
     if (record.lifetime === 'singleton') {
       this.services.set(resolvedToken, object);
@@ -144,6 +159,9 @@ export class Needle implements Container {
     try {
       object = factory(this);
     } catch (error: any) {
+      if (error instanceof CyclicDependencyError) {
+        throw error;
+      }
       throw new ServiceNotCreatedError(token, error.message);
     }
     return object;

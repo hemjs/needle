@@ -27,6 +27,12 @@ export class CyclicAliasError extends NeedleError {
   }
 }
 
+export class CyclicDependencyError extends NeedleError {
+  constructor(path: ProviderToken[]) {
+    super(CYCLIC_DEPENDENCY`${path.map(stringify).join(' -> ')}`);
+  }
+}
+
 export class InvalidClassError extends NeedleError {
   constructor(value: any) {
     super(INVALID_CLASS`${stringify(value)}`);
@@ -68,6 +74,9 @@ export class ServiceNotCreatedError extends NeedleError {
 
 const CYCLIC_ALIAS = (text: TemplateStringsArray, cycle: string) =>
   `Cycle detected within the aliases definitions:\n ${cycle}`;
+
+const CYCLIC_DEPENDENCY = (text: TemplateStringsArray, path: string) =>
+  `Circular dependency detected: ${path}`;
 
 export const INVALID_CLASS = (text: TemplateStringsArray, name: string) =>
   `Unable to instantiate class (${name} is not constructable).`;

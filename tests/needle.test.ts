@@ -715,3 +715,89 @@ test('Needle disables caching for factory provider (lifetime: transient)', () =>
 
   expect(a1).not.toBe(a2);
 });
+
+test('Needle throws for circular dependencies between factories', () => {
+  const needle = new Needle([
+    { provide: 'a', useFactory: (c: Container) => ({ b: c.get('b') }) },
+    { provide: 'b', useFactory: (c: Container) => ({ a: c.get('a') }) },
+  ]);
+
+  expect(() => needle.get('a')).toThrow(
+    'Circular dependency detected: a -> b -> a',
+  );
+});
+
+test('Needle reports only the cycle for chains leading into one', () => {
+  const needle = new Needle([
+    { provide: 'a', useFactory: (c: Container) => ({ b: c.get('b') }) },
+    { provide: 'b', useFactory: (c: Container) => ({ c: c.get('c') }) },
+    { provide: 'c', useFactory: (c: Container) => ({ d: c.get('d') }) },
+    { provide: 'd', useFactory: (c: Container) => ({ b: c.get('b') }) },
+  ]);
+
+  expect(() => needle.get('a')).toThrow(
+    'Circular dependency detected: b -> c -> d -> b',
+  );
+});
+
+test('Needle throws for services that depend on themselves', () => {
+  const needle = new Needle([
+    { provide: 'a', useFactory: (c: Container) => ({ a: c.get('a') }) },
+  ]);
+
+  expect(() => needle.get('a')).toThrow('Circular dependency detected: a -> a');
+});
+
+test('Needle throws for circular dependencies through aliases', () => {
+  const needle = new Needle([
+    { provide: 'a', useFactory: (c: Container) => ({ b: c.get('B') }) },
+    { provide: 'b', useFactory: (c: Container) => ({ a: c.get('a') }) },
+    { provide: 'B', useExisting: 'b' },
+  ]);
+
+  expect(() => needle.get('a')).toThrow(
+    'Circular dependency detected: a -> b -> a',
+  );
+});
+
+test('Needle throws for circular dependencies between transient services', () => {
+  const needle = new Needle(
+    [
+      { provide: 'a', useFactory: (c: Container) => ({ b: c.get('b') }) },
+      { provide: 'b', useFactory: (c: Container) => ({ a: c.get('a') }) },
+    ],
+    { lifetime: 'transient' },
+  );
+
+  expect(() => needle.get('a')).toThrow(
+    'Circular dependency detected: a -> b -> a',
+  );
+});
+
+test('Needle remains usable after a circular dependency error', () => {
+  let broken = true;
+  const needle = new Needle([
+    {
+      provide: 'a',
+      useFactory: (c: Container) => (broken ? { b: c.get('b') } : 'a'),
+    },
+    { provide: 'b', useFactory: (c: Container) => ({ a: c.get('a') }) },
+  ]);
+
+  expect(() => needle.get('a')).toThrow('Circular dependency detected');
+
+  broken = false;
+  expect(needle.get('a')).toBe('a');
+  expect(needle.get('b')).toEqual({ a: 'a' });
+});
+
+test('Needle allows deferred access between mutually dependent services', () => {
+  const needle = new Needle([
+    { provide: 'a', useFactory: (c: Container) => ({ b: () => c.get('b') }) },
+    { provide: 'b', useFactory: (c: Container) => ({ a: c.get('a') }) },
+  ]);
+
+  const a = needle.get<{ b: () => { a: unknown } }>('a');
+
+  expect(a.b().a).toBe(a);
+});
