@@ -1,7 +1,13 @@
 import type { Container } from '@armscye/container';
 import { expect, test } from 'vitest';
 
-import { Needle } from '../src/index.js';
+import {
+  CyclicDependencyError,
+  Needle,
+  NeedleError,
+  ProviderNotFoundError,
+  ServiceNotCreatedError,
+} from '../src/index.js';
 
 class Engine {}
 
@@ -504,6 +510,71 @@ test('Needle rethrows errors from provider constructors (useFactory)', () => {
   expect(() => needle.get(BrokenEngine.name)).toThrow(
     'Service for "BrokenEngine" could not be created. Reason: Broken Engine',
   );
+});
+
+test('Needle reports a nested failure once, with the resolution path', () => {
+  const needle = new Needle([
+    {
+      provide: 'Car',
+      useFactory: (c: Container) => ({ engine: c.get(BrokenEngine.name) }),
+    },
+    { provide: BrokenEngine.name, useClass: BrokenEngine },
+  ]);
+
+  expect(() => needle.get('Car')).toThrow(
+    'Service for "BrokenEngine" could not be created (Car -> BrokenEngine). Reason: Broken Engine',
+  );
+  expect(() => needle.get('Car')).not.toThrow('Service for "Car"');
+});
+
+test('Needle keeps the original error as the cause', () => {
+  const needle = new Needle([
+    { provide: BrokenEngine.name, useClass: BrokenEngine },
+  ]);
+
+  let error: unknown;
+  try {
+    needle.get(BrokenEngine.name);
+  } catch (e) {
+    error = e;
+  }
+
+  expect(error).toBeInstanceOf(ServiceNotCreatedError);
+  const cause = (error as ServiceNotCreatedError).cause;
+  expect(cause).toBeInstanceOf(Error);
+  expect((cause as Error).message).toBe('Broken Engine');
+});
+
+test('Needle reports values thrown by factories that are not errors', () => {
+  const needle = new Needle([
+    {
+      provide: 'a',
+      useFactory: () => {
+        // eslint-disable-next-line @typescript-eslint/only-throw-error
+        throw 'boom';
+      },
+    },
+  ]);
+
+  expect(() => needle.get('a')).toThrow(
+    'Service for "a" could not be created. Reason: boom',
+  );
+});
+
+test('Needle exports named error classes', () => {
+  const needle = new Needle([
+    { provide: 'a', useFactory: (c: Container) => c.get('a') },
+  ]);
+
+  expect(() => needle.get('missing')).toThrow(ProviderNotFoundError);
+  expect(() => needle.get('a')).toThrow(CyclicDependencyError);
+  expect(() => needle.get('a')).toThrow(NeedleError);
+
+  try {
+    needle.get('missing');
+  } catch (error) {
+    expect((error as Error).name).toBe('ProviderNotFoundError');
+  }
 });
 
 test('Needle adds value providers correctly', () => {
