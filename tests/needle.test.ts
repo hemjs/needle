@@ -328,7 +328,7 @@ test('Needle throws for non-constructable functions', () => {
 
 test('Needle throws for invalid class constructors', () => {
   expect(() => new Needle([{ provide: Car.name, useClass: <any>Car }])).toThrow(
-    'Invalid class constructor "Car"; expected a defult (no-argument) constructor.',
+    'Invalid class constructor "Car"; expected a default (no-argument) constructor.',
   );
 });
 
@@ -414,7 +414,7 @@ test('Needle handles aliases consistently in `has()`', () => {
   expect(needle.has(Engine.name)).toBe(true);
 });
 
-test('Needle correctly identifies non-existent providerst', () => {
+test('Needle correctly identifies non-existent providers', () => {
   const needle = new Needle();
 
   expect(needle.has('NonExisting')).toBe(false);
