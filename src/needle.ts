@@ -121,11 +121,15 @@ export class Needle implements Container {
   }
 
   isValueProvider(provider: Provider): provider is ValueProvider {
-    return (provider as ValueProvider).useValue !== undefined;
+    return (
+      typeof provider === 'object' &&
+      provider !== null &&
+      'useValue' in provider
+    );
   }
 
   isClassProvider(provider: Provider): provider is ClassProvider {
-    return !!(provider as ClassProvider).useClass;
+    return !!(provider && (provider as ClassProvider).useClass);
   }
 
   isFactoryProvider(provider: Provider): provider is FactoryProvider {

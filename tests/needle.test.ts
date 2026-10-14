@@ -129,6 +129,13 @@ test('Needle resolves providers to null values', () => {
   expect(engine).toBeNull();
 });
 
+test('Needle resolves providers to undefined values', () => {
+  const needle = new Needle([{ provide: Engine.name, useValue: undefined }]);
+
+  expect(needle.has(Engine.name)).toBe(true);
+  expect(needle.get(Engine.name)).toBeUndefined();
+});
+
 test('Needle uses aliases to reference existing providers', () => {
   const needle = new Needle([
     { provide: Engine.name, useClass: Engine },
@@ -309,6 +316,15 @@ test('Needle throws for undefined providers', () => {
 test('Needle throws for invalid provider definitions', () => {
   expect(() => new Needle(<any>[<any>'blah'])).toThrow(
     'Invalid provider definition detected; only instances of Provider are allowed, got: [blah].',
+  );
+});
+
+test('Needle throws for null and undefined provider definitions', () => {
+  expect(() => new Needle(<any>[null])).toThrow(
+    'Invalid provider definition detected; only instances of Provider are allowed, got: [null].',
+  );
+  expect(() => new Needle().addProvider(<any>undefined)).toThrow(
+    'Invalid provider definition detected; only instances of Provider are allowed, got: [undefined].',
   );
 });
 
