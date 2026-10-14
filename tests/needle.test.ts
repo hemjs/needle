@@ -360,6 +360,33 @@ test('Needle throws for cyclic alias chains', () => {
   );
 });
 
+test('Needle throws for cyclic alias chains of three or more aliases', () => {
+  expect(
+    () =>
+      new Needle([
+        { provide: 'A', useExisting: 'B' },
+        { provide: 'B', useExisting: 'C' },
+        { provide: 'C', useExisting: 'A' },
+      ]),
+  ).toThrow(
+    'Cycle detected within the aliases definitions:\n A -> B -> C -> A\n',
+  );
+});
+
+test('Needle throws for alias chains that lead into a cycle', () => {
+  expect(
+    () =>
+      new Needle([
+        { provide: 'A', useExisting: 'B' },
+        { provide: 'B', useExisting: 'C' },
+        { provide: 'C', useExisting: 'D' },
+        { provide: 'D', useExisting: 'B' },
+      ]),
+  ).toThrow(
+    'Cycle detected within the aliases definitions:\n B -> C -> D -> B\n',
+  );
+});
+
 test('Needle correctly identifies existing providers', () => {
   const needle = new Needle([
     { provide: String.name, useValue: 'Hello' },
@@ -483,6 +510,26 @@ test('Needle throws for cyclic chains of aliases', () => {
   }).toThrow(
     'Cycle detected within the aliases definitions:\n TurboEngine -> TurboEngine\n',
   );
+});
+
+test('Needle throws for cyclic alias chains added one at a time', () => {
+  const needle = new Needle();
+  needle.addProvider({ provide: 'A', useExisting: 'B' });
+  needle.addProvider({ provide: 'B', useExisting: 'C' });
+
+  expect(() => needle.addProvider({ provide: 'C', useExisting: 'A' })).toThrow(
+    'Cycle detected within the aliases definitions:\n',
+  );
+});
+
+test('Needle resolves aliases to aliases added later', () => {
+  const needle = new Needle([
+    { provide: Engine.name, useClass: Engine },
+    { provide: 'Turbo', useExisting: TurboEngine.name },
+  ]);
+  needle.addProvider({ provide: TurboEngine.name, useExisting: Engine.name });
+
+  expect(needle.get('Turbo')).toBe(needle.get(Engine.name));
 });
 
 test('Needle caches instances with provider (lifetime: singleton)', () => {

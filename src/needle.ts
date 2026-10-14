@@ -158,11 +158,8 @@ export class Needle implements Container {
   }
 
   mapAliasToTarget(alias: ProviderToken, target: ProviderToken): void {
-    const nTarget = this.aliases.get(target) ?? target;
-    this.aliases.set(alias, nTarget);
-    if (alias === this.aliases.get(alias)) {
-      throw new CyclicAliasError(alias, this.aliases);
-    }
+    this.aliases.set(alias, target);
+    this.mapAliasesToTargets();
   }
 
   mapAliasesToTargets(): void {
@@ -182,8 +179,8 @@ export class Needle implements Container {
       const stack = [];
       while (this.aliases.has(tCursor)) {
         stack.push(aCursor);
-        if (aCursor === this.aliases.get(tCursor)) {
-          throw new CyclicAliasError(alias, this.aliases);
+        if (stack.includes(tCursor)) {
+          throw new CyclicAliasError(tCursor, this.aliases);
         }
         aCursor = tCursor;
         tCursor = this.aliases.get(tCursor)!;
