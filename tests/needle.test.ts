@@ -219,7 +219,7 @@ test('Needle throws for aliases with undefined token', () => {
   expect(
     () => new Needle([{ provide: Engine.name, useExisting: undefined as any }]),
   ).toThrow(
-    'Invalid provider definition detected; only instances of Provider are allowed, got: [{"provide":"Engine"}].',
+    'Invalid provider definition detected; only instances of Provider are allowed, got: [{"provide":"Engine"}] at index 0.',
   );
 });
 
@@ -370,13 +370,26 @@ test('Needle throws for undefined providers', () => {
 
 test('Needle throws for invalid provider definitions', () => {
   expect(() => new Needle(<any>[<any>'blah'])).toThrow(
-    'Invalid provider definition detected; only instances of Provider are allowed, got: [blah].',
+    'Invalid provider definition detected; only instances of Provider are allowed, got: [blah] at index 0.',
+  );
+});
+
+test('Needle reports the position of an invalid provider in the list', () => {
+  expect(
+    () =>
+      new Needle([
+        { provide: Engine.name, useClass: Engine },
+        { provide: 'config', useValue: {} },
+        <any>{ provide: 'broken' },
+      ]),
+  ).toThrow(
+    'Invalid provider definition detected; only instances of Provider are allowed, got: [{"provide":"broken"}] at index 2.',
   );
 });
 
 test('Needle throws for null and undefined provider definitions', () => {
   expect(() => new Needle(<any>[null])).toThrow(
-    'Invalid provider definition detected; only instances of Provider are allowed, got: [null].',
+    'Invalid provider definition detected; only instances of Provider are allowed, got: [null] at index 0.',
   );
   expect(() => new Needle().addProvider(<any>undefined)).toThrow(
     'Invalid provider definition detected; only instances of Provider are allowed, got: [undefined].',
