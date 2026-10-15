@@ -11,7 +11,7 @@ export class NeedleError extends Error {
 
 export class CyclicAliasError extends NeedleError {
   constructor(path: ProviderToken[]) {
-    super(CYCLIC_ALIAS`${path.map(stringify).join(' -> ') + '\n'}`);
+    super(CYCLIC_ALIAS`${path.map(stringify).join(' -> ')}`);
   }
 }
 
@@ -34,8 +34,8 @@ export class InvalidConstructorError extends NeedleError {
 }
 
 export class InvalidFactoryError extends NeedleError {
-  constructor(value: any) {
-    super(INVALID_FACTORY`${typeof value}`);
+  constructor(value: any, index?: number) {
+    super(INVALID_FACTORY(typeof value, locate(index)));
   }
 }
 
@@ -47,11 +47,8 @@ export class ProviderNotFoundError extends NeedleError {
 
 export class InvalidProviderError extends NeedleError {
   constructor(value: any, index?: number) {
-    const detail = isPlainObject(value)
-      ? JSON.stringify(value)
-      : stringify(value);
-    const location = index === undefined ? '' : ` at index ${index}`;
-    super(INVALID_PROVIDER(detail, location));
+    const detail = isPlainObject(value) ? describe(value) : stringify(value);
+    super(INVALID_PROVIDER(detail, locate(index)));
   }
 }
 
@@ -66,7 +63,7 @@ export class ServiceNotCreatedError extends NeedleError {
 }
 
 const CYCLIC_ALIAS = (text: TemplateStringsArray, cycle: string) =>
-  `Cycle detected within the aliases definitions:\n ${cycle}`;
+  `Circular alias detected: ${cycle}`;
 
 const CYCLIC_DEPENDENCY = (text: TemplateStringsArray, path: string) =>
   `Circular dependency detected: ${path}`;
@@ -77,8 +74,8 @@ const INVALID_CLASS = (text: TemplateStringsArray, name: string) =>
 const INVALID_CONSTRUCTOR = (text: TemplateStringsArray, name: string) =>
   `Invalid class constructor "${name}"; expected a default (no-argument) constructor.`;
 
-const INVALID_FACTORY = (text: TemplateStringsArray, value: string) =>
-  `Invalid factory provided; expected a function, but "${value}" was received.`;
+const INVALID_FACTORY = (type: string, location: string) =>
+  `Invalid factory provided; expected a function, but "${type}" was received${location}.`;
 
 const PROVIDER_NOT_FOUND = (text: TemplateStringsArray, token: string) =>
   `No provider for "${token}" was found; are you certain you provided it during configuration?`;
@@ -89,3 +86,26 @@ const INVALID_PROVIDER = (detail: string, location: string) =>
 const SERVICE_NOT_CREATED = (token: string, route: string, reason: string) => {
   return `Service for "${token}" could not be created${route}. Reason: ${reason}`;
 };
+
+// Locates a provider in the constructor's list, for messages.
+function locate(index?: number): string {
+  return index === undefined ? '' : ` at index ${index}`;
+}
+
+// JSON for an invalid provider object, keeping the values JSON would drop or
+// choke on: symbols and functions by name, repeated objects as "[Circular]".
+function describe(value: object): string {
+  const seen = new WeakSet<object>();
+  return JSON.stringify(value, (key, val: unknown) => {
+    if (typeof val === 'symbol' || typeof val === 'function') {
+      return stringify(val);
+    }
+    if (typeof val === 'object' && val !== null) {
+      if (seen.has(val)) {
+        return '[Circular]';
+      }
+      seen.add(val);
+    }
+    return val;
+  });
+}
