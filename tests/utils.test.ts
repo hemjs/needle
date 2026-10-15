@@ -1,32 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
-import { isPlainObject, stringify } from '../src/utils.js';
+import { stringify } from '../src/utils.js';
 
 function foo() {}
-
-describe('isPlainObject', () => {
-  it('should return true when obj is plain object', () => {
-    expect(isPlainObject({})).toBe(true);
-    expect(isPlainObject({ prop: true })).toBe(true);
-    expect(
-      isPlainObject({
-        constructor: foo,
-      }),
-    ).toBe(true);
-    expect(isPlainObject(Object.create(null))).toBe(true);
-  });
-
-  it('should return false when object is not plain object', () => {
-    expect(isPlainObject()).toBe(false);
-    expect(isPlainObject(null)).toBe(false);
-    expect(isPlainObject(undefined)).toBe(false);
-    expect(isPlainObject('abc')).toBe(false);
-    expect(isPlainObject(123)).toBe(false);
-    expect(isPlainObject([1, 2, 3])).toBe(false);
-    expect(isPlainObject(foo)).toBe(false);
-    expect(isPlainObject(new Date())).toBe(false);
-  });
-});
 
 describe('stringify', () => {
   it('should return the same string for string inputs', () => {
@@ -67,5 +43,42 @@ describe('stringify', () => {
 
   it('should stringify arrays correctly', () => {
     expect(stringify([123, 456])).toBe('[123, 456]');
+  });
+
+  it('should not crash on objects without a prototype', () => {
+    expect(stringify(Object.create(null))).toBe('{}');
+  });
+
+  it('should name anonymous functions and classes without their source', () => {
+    expect(stringify(() => {})).toBe('(anonymous)');
+    expect(stringify(class {})).toBe('(anonymous)');
+  });
+
+  it('should serialize objects, even ones with a name property', () => {
+    expect(stringify({ name: 'Logger' })).toBe('{"name":"Logger"}');
+    expect(stringify({ foo: 1 })).toBe('{"foo":1}');
+  });
+
+  it('should serialize class instances by their own properties', () => {
+    class Config {
+      port = 3000;
+    }
+    expect(stringify(new Config())).toBe('{"port":3000}');
+  });
+
+  it('should serialize objects inside arrays', () => {
+    expect(stringify([{ provide: 'a' }, 'b'])).toBe('[{"provide":"a"}, b]');
+  });
+
+  it('should keep values that JSON drops or rejects', () => {
+    const value: any = { token: Symbol('db'), factory: foo, size: 10n };
+    value.self = value;
+    expect(stringify(value)).toBe(
+      '{"token":"Symbol(db)","factory":"foo","size":"10","self":"[Circular]"}',
+    );
+  });
+
+  it('should stringify bigints', () => {
+    expect(stringify(10n)).toBe('10');
   });
 });

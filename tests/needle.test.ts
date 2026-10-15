@@ -1021,3 +1021,23 @@ test('Needle names the conflict error', () => {
     'ProviderConflictError',
   );
 });
+
+test('Needle reports invalid classes without a prototype', () => {
+  expect(
+    () => new Needle([{ provide: 'a', useClass: Object.create(null) }]),
+  ).toThrow('Unable to instantiate class ({} is not instantiable).');
+});
+
+test('Needle reports nested provider arrays as invalid providers', () => {
+  expect(
+    () =>
+      new Needle([
+        <any>[
+          { provide: 'a', useValue: 1 },
+          { provide: 'b', useValue: 2 },
+        ],
+      ]),
+  ).toThrow(
+    'got: [[{"provide":"a","useValue":1}, {"provide":"b","useValue":2}]] at index 0.',
+  );
+});
