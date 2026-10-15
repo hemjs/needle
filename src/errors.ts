@@ -46,11 +46,12 @@ export class ProviderNotFoundError extends NeedleError {
 }
 
 export class InvalidProviderError extends NeedleError {
-  constructor(value: any) {
+  constructor(value: any, index?: number) {
     const detail = isPlainObject(value)
       ? JSON.stringify(value)
       : stringify(value);
-    super(INVALID_PROVIDER`${detail}`);
+    const location = index === undefined ? '' : ` at index ${index}`;
+    super(INVALID_PROVIDER(detail, location));
   }
 }
 
@@ -82,8 +83,8 @@ const INVALID_FACTORY = (text: TemplateStringsArray, value: string) =>
 const PROVIDER_NOT_FOUND = (text: TemplateStringsArray, token: string) =>
   `No provider for "${token}" was found; are you certain you provided it during configuration?`;
 
-const INVALID_PROVIDER = (text: TemplateStringsArray, detail: string) =>
-  `Invalid provider definition detected; only instances of Provider are allowed, got: [${detail}].`;
+const INVALID_PROVIDER = (detail: string, location: string) =>
+  `Invalid provider definition detected; only instances of Provider are allowed, got: [${detail}]${location}.`;
 
 const SERVICE_NOT_CREATED = (token: string, route: string, reason: string) => {
   return `Service for "${token}" could not be created${route}. Reason: ${reason}`;

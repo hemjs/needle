@@ -56,8 +56,8 @@ export class Needle implements Container {
   constructor(providers: Provider[] = [], options: NeedleOptions = {}) {
     this.#options = options;
 
-    for (const provider of providers) {
-      this.#register(provider);
+    for (const [index, provider] of providers.entries()) {
+      this.#register(provider, index);
     }
 
     // Aliases may point at tokens registered later in the list, so check
@@ -96,7 +96,8 @@ export class Needle implements Container {
     return this;
   }
 
-  #register(provider: Provider): void {
+  // `index` locates the provider in the constructor's list, for errors.
+  #register(provider: Provider, index?: number): void {
     if (isValueProvider(provider)) {
       this.#registry.set(provider.provide, {
         kind: 'value',
@@ -122,7 +123,7 @@ export class Needle implements Container {
         target: provider.useExisting,
       });
     } else {
-      throw new InvalidProviderError(provider);
+      throw new InvalidProviderError(provider, index);
     }
   }
 
