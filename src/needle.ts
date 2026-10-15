@@ -88,10 +88,24 @@ export class Needle implements Container {
   }
 
   addProvider(provider: Provider): this {
+    if (!isExistingProvider(provider)) {
+      this.#register(provider);
+      return this;
+    }
+
+    const previous = this.#registry.get(provider.provide);
     this.#register(provider);
-    if (isExistingProvider(provider)) {
+    try {
       // Any cycle this alias creates must pass through it.
       this.#resolveAlias(provider.provide);
+    } catch (error) {
+      // Leave the container as it was before the call.
+      if (previous === undefined) {
+        this.#registry.delete(provider.provide);
+      } else {
+        this.#registry.set(provider.provide, previous);
+      }
+      throw error;
     }
     return this;
   }
@@ -112,6 +126,9 @@ export class Needle implements Container {
       });
     } else if (isFactoryProvider(provider)) {
       const { provide, useFactory, lifetime } = provider;
+      if (typeof useFactory !== 'function') {
+        throw new InvalidFactoryError(useFactory, index);
+      }
       this.#registry.set(provide, {
         kind: 'factory',
         factory: useFactory,
@@ -159,10 +176,6 @@ export class Needle implements Container {
       return registration.instance.value;
     }
 
-    if (typeof registration.factory !== 'function') {
-      throw new InvalidFactoryError(registration.factory);
-    }
-
     if (this.#resolving.has(token)) {
       const path = [...this.#resolving];
       const cycle = path.slice(path.indexOf(token));
@@ -172,7 +185,7 @@ export class Needle implements Container {
     this.#resolving.add(token);
     let object: unknown;
     try {
-      object = this.#create(token, registration.factory);
+      object = this.#create(registration.factory);
     } finally {
       this.#resolving.delete(token);
     }
@@ -184,7 +197,7 @@ export class Needle implements Container {
     return object;
   }
 
-  #create(token: ProviderToken, factory: Factory): unknown {
+  #create(factory: Factory): unknown {
     try {
       return factory(this);
     } catch (error) {
@@ -195,11 +208,7 @@ export class Needle implements Container {
       ) {
         throw error;
       }
-      const path = [...this.#resolving];
-      if (path[path.length - 1] !== token) {
-        path.push(token);
-      }
-      throw new ServiceNotCreatedError(path, error);
+      throw new ServiceNotCreatedError([...this.#resolving], error);
     }
   }
 }

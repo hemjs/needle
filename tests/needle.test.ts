@@ -416,9 +416,19 @@ test('Needle throws for invalid class constructors', () => {
   );
 });
 
-test('Needle throws for invalid factory', () => {
-  const needle = new Needle([{ provide: Car.name, useFactory: <any>'abc' }]);
-  expect(() => needle.get(Car.name)).toThrow(
+test('Needle throws for invalid factories when they are registered', () => {
+  expect(
+    () =>
+      new Needle([
+        { provide: Engine.name, useClass: Engine },
+        { provide: Car.name, useFactory: <any>'abc' },
+      ]),
+  ).toThrow(
+    'Invalid factory provided; expected a function, but "string" was received at index 1.',
+  );
+  expect(() =>
+    new Needle().addProvider({ provide: Car.name, useFactory: <any>'abc' }),
+  ).toThrow(
     'Invalid factory provided; expected a function, but "string" was received.',
   );
 });
@@ -426,9 +436,7 @@ test('Needle throws for invalid factory', () => {
 test('Needle throws for cyclic aliases', () => {
   expect(
     () => new Needle([{ provide: Engine.name, useExisting: Engine.name }]),
-  ).toThrow(
-    'Cycle detected within the aliases definitions:\n Engine -> Engine\n',
-  );
+  ).toThrow('Circular alias detected: Engine -> Engine');
 });
 
 test('Needle throws for cyclic alias chains', () => {
@@ -439,9 +447,7 @@ test('Needle throws for cyclic alias chains', () => {
         { provide: Engine.name, useExisting: TurboEngine.name },
         { provide: TurboEngine.name, useExisting: Engine.name },
       ]),
-  ).toThrow(
-    'Cycle detected within the aliases definitions:\n Engine -> TurboEngine -> Engine\n',
-  );
+  ).toThrow('Circular alias detected: Engine -> TurboEngine -> Engine');
 });
 
 test('Needle throws for cyclic alias chains of three or more aliases', () => {
@@ -452,9 +458,7 @@ test('Needle throws for cyclic alias chains of three or more aliases', () => {
         { provide: 'B', useExisting: 'C' },
         { provide: 'C', useExisting: 'A' },
       ]),
-  ).toThrow(
-    'Cycle detected within the aliases definitions:\n A -> B -> C -> A\n',
-  );
+  ).toThrow('Circular alias detected: A -> B -> C -> A');
 });
 
 test('Needle throws for alias chains that lead into a cycle', () => {
@@ -466,9 +470,7 @@ test('Needle throws for alias chains that lead into a cycle', () => {
         { provide: 'C', useExisting: 'D' },
         { provide: 'D', useExisting: 'B' },
       ]),
-  ).toThrow(
-    'Cycle detected within the aliases definitions:\n B -> C -> D -> B\n',
-  );
+  ).toThrow('Circular alias detected: B -> C -> D -> B');
 });
 
 test('Needle correctly identifies existing providers', () => {
@@ -656,9 +658,7 @@ test('Needle throws for cyclic chains of aliases', () => {
       provide: 'TurboEngine',
       useExisting: 'TurboEngine',
     });
-  }).toThrow(
-    'Cycle detected within the aliases definitions:\n TurboEngine -> TurboEngine\n',
-  );
+  }).toThrow('Circular alias detected: TurboEngine -> TurboEngine');
 });
 
 test('Needle throws for cyclic alias chains added one at a time', () => {
@@ -667,7 +667,7 @@ test('Needle throws for cyclic alias chains added one at a time', () => {
   needle.addProvider({ provide: 'B', useExisting: 'C' });
 
   expect(() => needle.addProvider({ provide: 'C', useExisting: 'A' })).toThrow(
-    'Cycle detected within the aliases definitions:\n',
+    'Circular alias detected: ',
   );
 });
 
@@ -884,4 +884,40 @@ test('Needle allows deferred access between mutually dependent services', () => 
   const a = needle.get<{ b: () => { a: unknown } }>('a');
 
   expect(a.b().a).toBe(a);
+});
+
+test('Needle reports invalid providers that reference themselves', () => {
+  const provider: any = { provide: 'x' };
+  provider.self = provider;
+
+  expect(() => new Needle([provider])).toThrow(
+    'only instances of Provider are allowed, got: [{"provide":"x","self":"[Circular]"}] at index 0.',
+  );
+});
+
+test('Needle shows symbol and function values in invalid providers', () => {
+  expect(
+    () => new Needle([<any>{ provide: Symbol('db'), factory: () => 1 }]),
+  ).toThrow(
+    'only instances of Provider are allowed, got: [{"provide":"Symbol(db)","factory":"factory"}] at index 0.',
+  );
+});
+
+test('Needle keeps the previous provider when an alias creates a cycle', () => {
+  const needle = new Needle([
+    { provide: Engine.name, useClass: Engine },
+    { provide: 'A', useExisting: 'B' },
+    { provide: 'B', useExisting: Engine.name },
+  ]);
+
+  expect(() => needle.addProvider({ provide: 'B', useExisting: 'A' })).toThrow(
+    'Circular alias detected: B -> A -> B',
+  );
+  expect(needle.get('A')).toBeInstanceOf(Engine);
+  expect(needle.get('B')).toBeInstanceOf(Engine);
+
+  expect(() => needle.addProvider({ provide: 'C', useExisting: 'C' })).toThrow(
+    'Circular alias detected: C -> C',
+  );
+  expect(needle.has('C')).toBe(false);
 });
