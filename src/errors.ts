@@ -45,6 +45,14 @@ export class ProviderNotFoundError extends NeedleError {
   }
 }
 
+export class ProviderConflictError extends NeedleError {
+  constructor(token: ProviderToken, index?: number) {
+    const location =
+      index === undefined ? '' : `; conflicting provider${locate(index)}`;
+    super(PROVIDER_CONFLICT(stringify(token), location));
+  }
+}
+
 export class InvalidProviderError extends NeedleError {
   constructor(value: any, index?: number) {
     const detail = isPlainObject(value) ? describe(value) : stringify(value);
@@ -79,6 +87,9 @@ const INVALID_FACTORY = (type: string, location: string) =>
 
 const PROVIDER_NOT_FOUND = (text: TemplateStringsArray, token: string) =>
   `No provider for "${token}" was found; are you certain you provided it during configuration?`;
+
+const PROVIDER_CONFLICT = (token: string, location: string) =>
+  `A provider for "${token}" is already registered${location}.`;
 
 const INVALID_PROVIDER = (detail: string, location: string) =>
   `Invalid provider definition detected; only instances of Provider are allowed, got: [${detail}]${location}.`;

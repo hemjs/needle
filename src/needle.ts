@@ -18,12 +18,16 @@ import {
   InvalidConstructorError,
   InvalidFactoryError,
   InvalidProviderError,
+  ProviderConflictError,
   ProviderNotFoundError,
   ServiceNotCreatedError,
 } from './errors.js';
 
+export type ConflictPolicy = 'override' | 'error' | 'ignore';
+
 export interface NeedleOptions {
   lifetime?: Lifetime;
+  conflictPolicy?: ConflictPolicy;
 }
 
 interface ValueRegistration {
@@ -40,15 +44,12 @@ interface FactoryRegistration {
   kind: 'factory';
   factory: Factory;
   lifetime: Lifetime;
-  // Wrapped so that a factory returning undefined still counts as created.
   instance?: { value: unknown };
 }
 
 type Registration = ValueRegistration | AliasRegistration | FactoryRegistration;
 
 export class Needle implements Container {
-  // One registration per token: registering a token again replaces its
-  // registration, including any cached instance.
   readonly #registry = new Map<ProviderToken, Registration>();
   readonly #resolving = new Set<ProviderToken>();
   readonly #options: NeedleOptions;
@@ -60,8 +61,6 @@ export class Needle implements Container {
       this.#register(provider, index);
     }
 
-    // Aliases may point at tokens registered later in the list, so check
-    // them for cycles once everything is registered, in list order.
     for (const provider of providers) {
       if (isExistingProvider(provider)) {
         this.#resolveAlias(provider.provide);
@@ -94,12 +93,12 @@ export class Needle implements Container {
     }
 
     const previous = this.#registry.get(provider.provide);
-    this.#register(provider);
+    if (!this.#register(provider)) {
+      return this;
+    }
     try {
-      // Any cycle this alias creates must pass through it.
       this.#resolveAlias(provider.provide);
     } catch (error) {
-      // Leave the container as it was before the call.
       if (previous === undefined) {
         this.#registry.delete(provider.provide);
       } else {
@@ -110,42 +109,49 @@ export class Needle implements Container {
     return this;
   }
 
-  // `index` locates the provider in the constructor's list, for errors.
-  #register(provider: Provider, index?: number): void {
-    if (isValueProvider(provider)) {
-      this.#registry.set(provider.provide, {
-        kind: 'value',
-        value: provider.useValue,
-      });
-    } else if (isClassProvider(provider)) {
-      const { provide, useClass, lifetime } = provider;
-      this.#registry.set(provide, {
-        kind: 'factory',
-        factory: classToFactory(useClass),
-        lifetime: lifetime ?? this.#options.lifetime ?? 'singleton',
-      });
-    } else if (isFactoryProvider(provider)) {
-      const { provide, useFactory, lifetime } = provider;
-      if (typeof useFactory !== 'function') {
-        throw new InvalidFactoryError(useFactory, index);
+  #register(provider: Provider, index?: number): boolean {
+    const registration = this.#toRegistration(provider, index);
+
+    if (this.#registry.has(provider.provide)) {
+      switch (this.#options.conflictPolicy ?? 'override') {
+        case 'error':
+          throw new ProviderConflictError(provider.provide, index);
+        case 'ignore':
+          return false;
       }
-      this.#registry.set(provide, {
-        kind: 'factory',
-        factory: useFactory,
-        lifetime: lifetime ?? this.#options.lifetime ?? 'singleton',
-      });
-    } else if (isExistingProvider(provider)) {
-      this.#registry.set(provider.provide, {
-        kind: 'alias',
-        target: provider.useExisting,
-      });
-    } else {
-      throw new InvalidProviderError(provider, index);
     }
+
+    this.#registry.set(provider.provide, registration);
+    return true;
   }
 
-  // Aliases are stored as registered and followed on every lookup, so
-  // replacing any link in a chain takes effect.
+  #toRegistration(provider: Provider, index?: number): Registration {
+    if (isValueProvider(provider)) {
+      return { kind: 'value', value: provider.useValue };
+    }
+    if (isClassProvider(provider)) {
+      return {
+        kind: 'factory',
+        factory: classToFactory(provider.useClass),
+        lifetime: provider.lifetime ?? this.#options.lifetime ?? 'singleton',
+      };
+    }
+    if (isFactoryProvider(provider)) {
+      if (typeof provider.useFactory !== 'function') {
+        throw new InvalidFactoryError(provider.useFactory, index);
+      }
+      return {
+        kind: 'factory',
+        factory: provider.useFactory,
+        lifetime: provider.lifetime ?? this.#options.lifetime ?? 'singleton',
+      };
+    }
+    if (isExistingProvider(provider)) {
+      return { kind: 'alias', target: provider.useExisting };
+    }
+    throw new InvalidProviderError(provider, index);
+  }
+
   #resolveAlias(token: ProviderToken): ProviderToken {
     let registration = this.#registry.get(token);
     if (registration?.kind !== 'alias') {
@@ -156,8 +162,6 @@ export class Needle implements Container {
     let cursor = token;
     while (registration?.kind === 'alias') {
       if (seen.has(cursor)) {
-        // Report from cursor: it lies on the cycle, while `token` may only
-        // lead into it.
         const path = [...seen];
         throw new CyclicAliasError([
           ...path.slice(path.indexOf(cursor)),
@@ -201,7 +205,6 @@ export class Needle implements Container {
     try {
       return factory(this);
     } catch (error) {
-      // Wrap only the innermost failure; its message carries the path.
       if (
         error instanceof CyclicDependencyError ||
         error instanceof ServiceNotCreatedError

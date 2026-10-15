@@ -6,6 +6,7 @@ import {
   Needle,
   NeedleError,
   ProviderNotFoundError,
+  ProviderConflictError,
   ServiceNotCreatedError,
 } from '../src/index.js';
 
@@ -920,4 +921,103 @@ test('Needle keeps the previous provider when an alias creates a cycle', () => {
     'Circular alias detected: C -> C',
   );
   expect(needle.has('C')).toBe(false);
+});
+
+test('Needle overrides conflicting providers by default', () => {
+  const needle = new Needle([
+    { provide: Engine.name, useClass: Engine },
+    { provide: Engine.name, useClass: TurboEngine },
+  ]);
+  needle.addProvider({ provide: 'config', useValue: 1 });
+  needle.addProvider({ provide: 'config', useValue: 2 });
+
+  expect(needle.get(Engine.name)).toBeInstanceOf(TurboEngine);
+  expect(needle.get('config')).toBe(2);
+});
+
+test('Needle overrides conflicting providers with the override policy', () => {
+  const needle = new Needle(
+    [
+      { provide: Engine.name, useClass: Engine },
+      { provide: Engine.name, useValue: 'fake engine' },
+    ],
+    { conflictPolicy: 'override' },
+  );
+
+  expect(needle.get(Engine.name)).toBe('fake engine');
+});
+
+test('Needle throws for conflicting providers in the list with the error policy', () => {
+  expect(
+    () =>
+      new Needle(
+        [
+          { provide: Engine.name, useClass: Engine },
+          { provide: 'config', useValue: {} },
+          { provide: Engine.name, useExisting: 'config' },
+        ],
+        { conflictPolicy: 'error' },
+      ),
+  ).toThrow(
+    'A provider for "Engine" is already registered; conflicting provider at index 2.',
+  );
+});
+
+test('Needle throws for conflicting added providers with the error policy', () => {
+  const needle = new Needle([{ provide: Engine.name, useClass: Engine }], {
+    conflictPolicy: 'error',
+  });
+
+  expect(() =>
+    needle.addProvider({ provide: Engine.name, useClass: TurboEngine }),
+  ).toThrow(ProviderConflictError);
+  expect(() =>
+    needle.addProvider({ provide: Engine.name, useClass: TurboEngine }),
+  ).toThrow('A provider for "Engine" is already registered.');
+  expect(needle.get(Engine.name)).not.toBeInstanceOf(TurboEngine);
+
+  needle.addProvider({ provide: TurboEngine.name, useClass: TurboEngine });
+  expect(needle.get(TurboEngine.name)).toBeInstanceOf(TurboEngine);
+});
+
+test('Needle keeps the first conflicting provider with the ignore policy', () => {
+  const needle = new Needle(
+    [
+      { provide: Engine.name, useValue: 'mock engine' },
+      { provide: Engine.name, useClass: Engine },
+    ],
+    { conflictPolicy: 'ignore' },
+  );
+  needle.addProvider({ provide: Engine.name, useClass: TurboEngine });
+
+  expect(needle.get(Engine.name)).toBe('mock engine');
+});
+
+test('Needle ignores conflicting aliases without checking them for cycles', () => {
+  const needle = new Needle([{ provide: 'A', useValue: 'a' }], {
+    conflictPolicy: 'ignore',
+  });
+
+  expect(() =>
+    needle.addProvider({ provide: 'A', useExisting: 'A' }),
+  ).not.toThrow();
+  expect(needle.get('A')).toBe('a');
+});
+
+test('Needle validates conflicting providers before applying the policy', () => {
+  for (const conflictPolicy of ['error', 'ignore'] as const) {
+    const needle = new Needle([{ provide: Engine.name, useClass: Engine }], {
+      conflictPolicy,
+    });
+
+    expect(() =>
+      needle.addProvider({ provide: Engine.name, useClass: <any>'blah' }),
+    ).toThrow('Unable to instantiate class (blah is not constructable).');
+  }
+});
+
+test('Needle names the conflict error', () => {
+  expect(new ProviderConflictError('Engine').name).toBe(
+    'ProviderConflictError',
+  );
 });
