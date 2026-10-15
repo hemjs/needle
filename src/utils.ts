@@ -1,42 +1,35 @@
-export function isPlainObject(value?: any): value is object {
-  if (typeof value !== 'object' || value === null) {
-    return false;
-  }
-
-  const proto = Object.getPrototypeOf(value);
-
-  if (proto === null) {
-    return true;
-  }
-
-  const ctor =
-    Object.prototype.hasOwnProperty.call(proto, 'constructor') &&
-    proto.constructor;
-
-  return (
-    typeof ctor === 'function' &&
-    ctor instanceof ctor &&
-    Function.prototype.toString.call(ctor) ===
-      Function.prototype.toString.call(Object)
-  );
-}
-
-export function stringify(value: any): string {
+export function stringify(value: unknown): string {
   if (typeof value === 'string') {
     return value;
   }
-
+  if (typeof value === 'function') {
+    return value.name || '(anonymous)';
+  }
   if (Array.isArray(value)) {
-    return '[' + value.map(stringify).join(', ') + ']';
+    return `[${value.map(stringify).join(', ')}]`;
   }
-
-  if (typeof value === 'undefined' || value === null) {
-    return '' + value;
+  if (typeof value === 'object' && value !== null) {
+    return serialize(value);
   }
+  return String(value);
+}
 
-  if (value.name) {
-    return `${value.name}`;
-  }
-
-  return value.toString();
+function serialize(value: object): string {
+  const seen = new WeakSet<object>();
+  return JSON.stringify(value, (key, item: unknown) => {
+    if (
+      typeof item === 'symbol' ||
+      typeof item === 'function' ||
+      typeof item === 'bigint'
+    ) {
+      return stringify(item);
+    }
+    if (typeof item === 'object' && item !== null) {
+      if (seen.has(item)) {
+        return '[Circular]';
+      }
+      seen.add(item);
+    }
+    return item;
+  });
 }

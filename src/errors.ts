@@ -1,6 +1,6 @@
 import type { ProviderToken } from '@armscye/container';
 
-import { isPlainObject, stringify } from './utils.js';
+import { stringify } from './utils.js';
 
 export class NeedleError extends Error {
   constructor(message: string, options?: ErrorOptions) {
@@ -55,8 +55,7 @@ export class ProviderConflictError extends NeedleError {
 
 export class InvalidProviderError extends NeedleError {
   constructor(value: any, index?: number) {
-    const detail = isPlainObject(value) ? serialize(value) : stringify(value);
-    super(INVALID_PROVIDER(detail, atIndex(index)));
+    super(INVALID_PROVIDER(stringify(value), atIndex(index)));
   }
 }
 
@@ -99,22 +98,4 @@ const SERVICE_NOT_CREATED = (token: string, route: string, reason: string) =>
 // Locates a provider in the constructor's list, for messages.
 function atIndex(index?: number): string {
   return index === undefined ? '' : ` at index ${index}`;
-}
-
-// JSON for an invalid provider object, keeping the values JSON would drop or
-// choke on: symbols and functions by name, repeated objects as "[Circular]".
-function serialize(value: object): string {
-  const seen = new WeakSet<object>();
-  return JSON.stringify(value, (key, item: unknown) => {
-    if (typeof item === 'symbol' || typeof item === 'function') {
-      return stringify(item);
-    }
-    if (typeof item === 'object' && item !== null) {
-      if (seen.has(item)) {
-        return '[Circular]';
-      }
-      seen.add(item);
-    }
-    return item;
-  });
 }
