@@ -9,54 +9,54 @@ export class NeedleError extends Error {
   }
 }
 
-export class CyclicAliasError extends NeedleError {
+export class CircularAliasError extends NeedleError {
   constructor(path: ProviderToken[]) {
-    super(CYCLIC_ALIAS`${path.map(stringify).join(' -> ')}`);
+    super(CIRCULAR_ALIAS(path.map(stringify).join(' -> ')));
   }
 }
 
-export class CyclicDependencyError extends NeedleError {
+export class CircularDependencyError extends NeedleError {
   constructor(path: ProviderToken[]) {
-    super(CYCLIC_DEPENDENCY`${path.map(stringify).join(' -> ')}`);
+    super(CIRCULAR_DEPENDENCY(path.map(stringify).join(' -> ')));
   }
 }
 
 export class InvalidClassError extends NeedleError {
   constructor(value: any) {
-    super(INVALID_CLASS`${stringify(value)}`);
+    super(INVALID_CLASS(stringify(value)));
   }
 }
 
 export class InvalidConstructorError extends NeedleError {
   constructor(value: any) {
-    super(INVALID_CONSTRUCTOR`${stringify(value)}`);
+    super(INVALID_CONSTRUCTOR(stringify(value)));
   }
 }
 
 export class InvalidFactoryError extends NeedleError {
   constructor(value: any, index?: number) {
-    super(INVALID_FACTORY(typeof value, locate(index)));
+    super(INVALID_FACTORY(typeof value, atIndex(index)));
   }
 }
 
 export class ProviderNotFoundError extends NeedleError {
   constructor(token: ProviderToken) {
-    super(PROVIDER_NOT_FOUND`${stringify(token)}`);
+    super(PROVIDER_NOT_FOUND(stringify(token)));
   }
 }
 
 export class ProviderConflictError extends NeedleError {
   constructor(token: ProviderToken, index?: number) {
     const location =
-      index === undefined ? '' : `; conflicting provider${locate(index)}`;
+      index === undefined ? '' : `; conflicting provider${atIndex(index)}`;
     super(PROVIDER_CONFLICT(stringify(token), location));
   }
 }
 
 export class InvalidProviderError extends NeedleError {
   constructor(value: any, index?: number) {
-    const detail = isPlainObject(value) ? describe(value) : stringify(value);
-    super(INVALID_PROVIDER(detail, locate(index)));
+    const detail = isPlainObject(value) ? serialize(value) : stringify(value);
+    super(INVALID_PROVIDER(detail, atIndex(index)));
   }
 }
 
@@ -70,22 +70,21 @@ export class ServiceNotCreatedError extends NeedleError {
   }
 }
 
-const CYCLIC_ALIAS = (text: TemplateStringsArray, cycle: string) =>
-  `Circular alias detected: ${cycle}`;
+const CIRCULAR_ALIAS = (cycle: string) => `Circular alias detected: ${cycle}`;
 
-const CYCLIC_DEPENDENCY = (text: TemplateStringsArray, path: string) =>
-  `Circular dependency detected: ${path}`;
+const CIRCULAR_DEPENDENCY = (cycle: string) =>
+  `Circular dependency detected: ${cycle}`;
 
-const INVALID_CLASS = (text: TemplateStringsArray, name: string) =>
-  `Unable to instantiate class (${name} is not constructable).`;
+const INVALID_CLASS = (name: string) =>
+  `Unable to instantiate class (${name} is not instantiable).`;
 
-const INVALID_CONSTRUCTOR = (text: TemplateStringsArray, name: string) =>
+const INVALID_CONSTRUCTOR = (name: string) =>
   `Invalid class constructor "${name}"; expected a default (no-argument) constructor.`;
 
 const INVALID_FACTORY = (type: string, location: string) =>
   `Invalid factory provided; expected a function, but "${type}" was received${location}.`;
 
-const PROVIDER_NOT_FOUND = (text: TemplateStringsArray, token: string) =>
+const PROVIDER_NOT_FOUND = (token: string) =>
   `No provider for "${token}" was found; are you certain you provided it during configuration?`;
 
 const PROVIDER_CONFLICT = (token: string, location: string) =>
@@ -94,29 +93,28 @@ const PROVIDER_CONFLICT = (token: string, location: string) =>
 const INVALID_PROVIDER = (detail: string, location: string) =>
   `Invalid provider definition detected; only instances of Provider are allowed, got: [${detail}]${location}.`;
 
-const SERVICE_NOT_CREATED = (token: string, route: string, reason: string) => {
-  return `Service for "${token}" could not be created${route}. Reason: ${reason}`;
-};
+const SERVICE_NOT_CREATED = (token: string, route: string, reason: string) =>
+  `Service for "${token}" could not be created${route}. Reason: ${reason}`;
 
 // Locates a provider in the constructor's list, for messages.
-function locate(index?: number): string {
+function atIndex(index?: number): string {
   return index === undefined ? '' : ` at index ${index}`;
 }
 
 // JSON for an invalid provider object, keeping the values JSON would drop or
 // choke on: symbols and functions by name, repeated objects as "[Circular]".
-function describe(value: object): string {
+function serialize(value: object): string {
   const seen = new WeakSet<object>();
-  return JSON.stringify(value, (key, val: unknown) => {
-    if (typeof val === 'symbol' || typeof val === 'function') {
-      return stringify(val);
+  return JSON.stringify(value, (key, item: unknown) => {
+    if (typeof item === 'symbol' || typeof item === 'function') {
+      return stringify(item);
     }
-    if (typeof val === 'object' && val !== null) {
-      if (seen.has(val)) {
+    if (typeof item === 'object' && item !== null) {
+      if (seen.has(item)) {
         return '[Circular]';
       }
-      seen.add(val);
+      seen.add(item);
     }
-    return val;
+    return item;
   });
 }

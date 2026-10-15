@@ -1,6 +1,6 @@
 export {
-  CyclicAliasError,
-  CyclicDependencyError,
+  CircularAliasError,
+  CircularDependencyError,
   InvalidClassError,
   InvalidConstructorError,
   InvalidFactoryError,

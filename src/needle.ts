@@ -12,8 +12,8 @@ import type {
 import type { NoArgument, Type } from '@armscye/core';
 
 import {
-  CyclicAliasError,
-  CyclicDependencyError,
+  CircularAliasError,
+  CircularDependencyError,
   InvalidClassError,
   InvalidConstructorError,
   InvalidFactoryError,
@@ -30,28 +30,28 @@ export interface NeedleOptions {
   conflictPolicy?: ConflictPolicy;
 }
 
-interface ValueRegistration {
+interface ValueRecord {
   kind: 'value';
   value: unknown;
 }
 
-interface AliasRegistration {
+interface AliasRecord {
   kind: 'alias';
   target: ProviderToken;
 }
 
-interface FactoryRegistration {
+interface FactoryRecord {
   kind: 'factory';
   factory: Factory;
   lifetime: Lifetime;
   instance?: { value: unknown };
 }
 
-type Registration = ValueRegistration | AliasRegistration | FactoryRegistration;
+type ProviderRecord = ValueRecord | AliasRecord | FactoryRecord;
 
 export class Needle implements Container {
-  readonly #registry = new Map<ProviderToken, Registration>();
-  readonly #resolving = new Set<ProviderToken>();
+  readonly #records = new Map<ProviderToken, ProviderRecord>();
+  readonly #path = new Set<ProviderToken>();
   readonly #options: NeedleOptions;
 
   constructor(providers: Provider[] = [], options: NeedleOptions = {}) {
@@ -63,27 +63,27 @@ export class Needle implements Container {
 
     for (const provider of providers) {
       if (isExistingProvider(provider)) {
-        this.#resolveAlias(provider.provide);
+        this.#getAlias(provider.provide);
       }
     }
   }
 
   get<T>(token: ProviderToken): T {
-    const resolvedToken = this.#resolveAlias(token);
-    const registration = this.#registry.get(resolvedToken);
+    const target = this.#getAlias(token);
+    const record = this.#records.get(target);
 
-    switch (registration?.kind) {
+    switch (record?.kind) {
       case 'value':
-        return registration.value as T;
+        return record.value as T;
       case 'factory':
-        return this.#instantiate(resolvedToken, registration) as T;
+        return this.#getOrCreate(target, record) as T;
       default:
-        throw new ProviderNotFoundError(resolvedToken);
+        throw new ProviderNotFoundError(target);
     }
   }
 
   has(token: ProviderToken): boolean {
-    return this.#registry.has(this.#resolveAlias(token));
+    return this.#records.has(this.#getAlias(token));
   }
 
   addProvider(provider: Provider): this {
@@ -92,17 +92,17 @@ export class Needle implements Container {
       return this;
     }
 
-    const previous = this.#registry.get(provider.provide);
+    const previous = this.#records.get(provider.provide);
     if (!this.#register(provider)) {
       return this;
     }
     try {
-      this.#resolveAlias(provider.provide);
+      this.#getAlias(provider.provide);
     } catch (error) {
       if (previous === undefined) {
-        this.#registry.delete(provider.provide);
+        this.#records.delete(provider.provide);
       } else {
-        this.#registry.set(provider.provide, previous);
+        this.#records.set(provider.provide, previous);
       }
       throw error;
     }
@@ -110,9 +110,9 @@ export class Needle implements Container {
   }
 
   #register(provider: Provider, index?: number): boolean {
-    const registration = this.#toRegistration(provider, index);
+    const record = this.#toRecord(provider, index);
 
-    if (this.#registry.has(provider.provide)) {
+    if (this.#records.has(provider.provide)) {
       switch (this.#options.conflictPolicy ?? 'override') {
         case 'error':
           throw new ProviderConflictError(provider.provide, index);
@@ -121,11 +121,11 @@ export class Needle implements Container {
       }
     }
 
-    this.#registry.set(provider.provide, registration);
+    this.#records.set(provider.provide, record);
     return true;
   }
 
-  #toRegistration(provider: Provider, index?: number): Registration {
+  #toRecord(provider: Provider, index?: number): ProviderRecord {
     if (isValueProvider(provider)) {
       return { kind: 'value', value: provider.useValue };
     }
@@ -152,66 +152,66 @@ export class Needle implements Container {
     throw new InvalidProviderError(provider, index);
   }
 
-  #resolveAlias(token: ProviderToken): ProviderToken {
-    let registration = this.#registry.get(token);
-    if (registration?.kind !== 'alias') {
+  #getAlias(token: ProviderToken): ProviderToken {
+    let record = this.#records.get(token);
+    if (record?.kind !== 'alias') {
       return token;
     }
 
     const seen = new Set<ProviderToken>();
     let cursor = token;
-    while (registration?.kind === 'alias') {
+    while (record?.kind === 'alias') {
       if (seen.has(cursor)) {
         const path = [...seen];
-        throw new CyclicAliasError([
+        throw new CircularAliasError([
           ...path.slice(path.indexOf(cursor)),
           cursor,
         ]);
       }
       seen.add(cursor);
-      cursor = registration.target;
-      registration = this.#registry.get(cursor);
+      cursor = record.target;
+      record = this.#records.get(cursor);
     }
     return cursor;
   }
 
-  #instantiate(token: ProviderToken, registration: FactoryRegistration) {
-    if (registration.instance) {
-      return registration.instance.value;
+  #getOrCreate(token: ProviderToken, record: FactoryRecord) {
+    if (record.instance) {
+      return record.instance.value;
     }
 
-    if (this.#resolving.has(token)) {
-      const path = [...this.#resolving];
+    if (this.#path.has(token)) {
+      const path = [...this.#path];
       const cycle = path.slice(path.indexOf(token));
-      throw new CyclicDependencyError([...cycle, token]);
+      throw new CircularDependencyError([...cycle, token]);
     }
 
-    this.#resolving.add(token);
-    let object: unknown;
+    this.#path.add(token);
+    let value: unknown;
     try {
-      object = this.#create(registration.factory);
+      value = this.#build(record.factory);
     } finally {
-      this.#resolving.delete(token);
+      this.#path.delete(token);
     }
 
-    if (registration.lifetime === 'singleton') {
-      registration.instance = { value: object };
+    if (record.lifetime === 'singleton') {
+      record.instance = { value };
     }
 
-    return object;
+    return value;
   }
 
-  #create(factory: Factory): unknown {
+  #build(factory: Factory): unknown {
     try {
       return factory(this);
     } catch (error) {
       if (
-        error instanceof CyclicDependencyError ||
+        error instanceof CircularDependencyError ||
         error instanceof ServiceNotCreatedError
       ) {
         throw error;
       }
-      throw new ServiceNotCreatedError([...this.#resolving], error);
+      throw new ServiceNotCreatedError([...this.#path], error);
     }
   }
 }
@@ -235,7 +235,7 @@ function isExistingProvider(provider: Provider): provider is ExistingProvider {
 }
 
 function classToFactory(type: NoArgument<any>): Factory {
-  if (!isNewable(type)) {
+  if (!isInstantiable(type)) {
     throw new InvalidClassError(type);
   }
   if (type.length > 0) {
@@ -244,6 +244,6 @@ function classToFactory(type: NoArgument<any>): Factory {
   return () => new (type as Type<any>)();
 }
 
-function isNewable(type: Type<any>): boolean {
+function isInstantiable(type: Type<any>): boolean {
   return typeof type === 'function' && typeof type.prototype !== 'undefined';
 }

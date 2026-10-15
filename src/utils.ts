@@ -21,22 +21,22 @@ export function isPlainObject(value?: any): value is object {
   );
 }
 
-export function stringify(val: any): string {
-  if (typeof val === 'string') {
-    return val;
+export function stringify(value: any): string {
+  if (typeof value === 'string') {
+    return value;
   }
 
-  if (Array.isArray(val)) {
-    return '[' + val.map(stringify).join(', ') + ']';
+  if (Array.isArray(value)) {
+    return '[' + value.map(stringify).join(', ') + ']';
   }
 
-  if (typeof val === 'undefined' || val === null) {
-    return '' + val;
+  if (typeof value === 'undefined' || value === null) {
+    return '' + value;
   }
 
-  if (val.name) {
-    return `${val.name}`;
+  if (value.name) {
+    return `${value.name}`;
   }
 
-  return val.toString();
+  return value.toString();
 }
