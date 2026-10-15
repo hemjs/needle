@@ -9,6 +9,7 @@
 - [Introduction](#introduction)
 - [Features](#features)
 - [Container](#container)
+- [Conflict policy](#conflict-policy)
 - [Lifetime](#lifetime)
 - [Providers](#providers)
 - [Best practices](#best-practices)
@@ -201,6 +202,47 @@ Once providers are registered, retrieve instances using the `get` method and the
 ```tsx
 const loggerService = container.get<LoggerService>(LoggerService.name);
 const loggerService = container.get<LoggerService>('LOGGER');
+```
+
+### Conflict policy
+
+A conflict happens when a provider is registered for a token that already has one, either within the constructor's list or through `addProvider`. The `conflictPolicy` option decides what happens:
+
+| Value      | Description                                                                            |
+| ---------- | -------------------------------------------------------------------------------------- |
+| `override` | The new provider replaces the previous one; the last registration wins. (Default)      |
+| `error`    | Needle throws a `ProviderConflictError` naming the token and, for the list, its index. |
+| `ignore`   | The new provider is skipped; the first registration wins.                              |
+
+Every provider is validated before the policy applies, so an invalid provider is reported whatever the policy.
+
+By default, Needle uses `override`. This lets later providers replace earlier ones, for example when an application's configuration overrides defaults supplied by a library:
+
+```tsx
+const container = new Needle([
+  { provide: 'LOGGER', useClass: ConsoleLogger }, // library default
+  { provide: 'LOGGER', useClass: FileLogger }, // application override
+]);
+
+container.get('LOGGER'); // FileLogger
+```
+
+Replacing a provider does not affect services that were already created with the previous one; they keep the instance they received.
+
+Use `error` when every token should have exactly one provider, so that two modules claiming the same token are caught when the container is created:
+
+```tsx
+const container = new Needle(providers, { conflictPolicy: 'error' });
+// ProviderConflictError: A provider for "LOGGER" is already registered; conflicting provider at index 12.
+```
+
+Use `ignore` when the providers registered first should win, such as test doubles placed ahead of the application's providers:
+
+```tsx
+const container = new Needle(
+  [{ provide: 'MAILER', useValue: fakeMailer }, ...providers],
+  { conflictPolicy: 'ignore' },
+);
 ```
 
 ### Lifetime

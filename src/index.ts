@@ -6,6 +6,7 @@ export {
   InvalidFactoryError,
   InvalidProviderError,
   NeedleError,
+  ProviderConflictError,
   ProviderNotFoundError,
   ServiceNotCreatedError,
 } from './errors.js';
