@@ -159,13 +159,13 @@ test('Needle uses aliases to reference existing providers', () => {
   expect(car).toBe(sportsCar);
 });
 
-test('Needle resolve aliases correctly when container is reinitialized', () => {
+test('Needle resolves aliases added after construction', () => {
   const needle = new Needle([
     { provide: Engine.name, useClass: Engine },
     { provide: TurboEngine.name, useExisting: Engine.name },
   ]);
 
-  needle.initialize([{ provide: 'Turbo', useExisting: TurboEngine.name }]);
+  needle.addProvider({ provide: 'Turbo', useExisting: TurboEngine.name });
 
   expect(needle.get('Turbo')).toBeInstanceOf(Engine);
 });

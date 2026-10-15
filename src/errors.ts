@@ -10,21 +10,8 @@ export class NeedleError extends Error {
 }
 
 export class CyclicAliasError extends NeedleError {
-  constructor(
-    alias: ProviderToken,
-    aliases: Map<ProviderToken, ProviderToken>,
-  ) {
-    let cycle = stringify(alias);
-    let cursor = alias;
-
-    while (aliases.has(cursor) && aliases.get(cursor) !== alias) {
-      cursor = aliases.get(cursor)!;
-      cycle += ' -> ' + stringify(cursor);
-    }
-
-    cycle += ' -> ' + stringify(alias) + '\n';
-
-    super(CYCLIC_ALIAS`${cycle}`);
+  constructor(path: ProviderToken[]) {
+    super(CYCLIC_ALIAS`${path.map(stringify).join(' -> ') + '\n'}`);
   }
 }
 
