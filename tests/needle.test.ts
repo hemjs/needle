@@ -2,7 +2,7 @@ import type { Container } from '@armscye/container';
 import { expect, test } from 'vitest';
 
 import {
-  CyclicDependencyError,
+  CircularDependencyError,
   Needle,
   NeedleError,
   ProviderNotFoundError,
@@ -400,15 +400,15 @@ test('Needle throws for null and undefined provider definitions', () => {
 test('Needle throws for invalid classes', () => {
   expect(
     () => new Needle([{ provide: Engine.name, useClass: <any>'blah' }]),
-  ).toThrow('Unable to instantiate class (blah is not constructable).');
+  ).toThrow('Unable to instantiate class (blah is not instantiable).');
 });
 
-test('Needle throws for non-constructable functions', () => {
+test('Needle throws for non-instantiable functions', () => {
   const createEngine = () => new Engine();
 
   expect(
     () => new Needle([{ provide: Engine.name, useClass: <any>createEngine }]),
-  ).toThrow('Unable to instantiate class (createEngine is not constructable).');
+  ).toThrow('Unable to instantiate class (createEngine is not instantiable).');
 });
 
 test('Needle throws for invalid class constructors', () => {
@@ -583,7 +583,7 @@ test('Needle exports named error classes', () => {
   ]);
 
   expect(() => needle.get('missing')).toThrow(ProviderNotFoundError);
-  expect(() => needle.get('a')).toThrow(CyclicDependencyError);
+  expect(() => needle.get('a')).toThrow(CircularDependencyError);
   expect(() => needle.get('a')).toThrow(NeedleError);
 
   try {
@@ -1012,7 +1012,7 @@ test('Needle validates conflicting providers before applying the policy', () => 
 
     expect(() =>
       needle.addProvider({ provide: Engine.name, useClass: <any>'blah' }),
-    ).toThrow('Unable to instantiate class (blah is not constructable).');
+    ).toThrow('Unable to instantiate class (blah is not instantiable).');
   }
 });
 
