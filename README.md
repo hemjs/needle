@@ -1,214 +1,351 @@
 # @hemjs/needle
 
-> A fast and intuitive dependency injection container for JavaScript and Node.js.
+> A lightweight and intuitive dependency injection container for JavaScript and TypeScript.
+
+Needle builds your services from a list of providers and hands them out by token. Values, classes, factories and aliases cover the ways a service can be made; singleton and transient lifetimes decide when it is shared; and a conflict policy decides what happens when two providers claim the same token. Providers are checked as soon as they are registered, alias and dependency cycles are detected, and every error says which provider or service is at fault. Everything is synchronous, with no decorators or reflection to configure.
 
 ## Table of contents
 
 - [Installation](#installation)
 - [Quick start](#quick-start)
-- [Introduction](#introduction)
-- [Features](#features)
-- [Container](#container)
-- [Conflict policy](#conflict-policy)
-- [Lifetime](#lifetime)
+- [How it works](#how-it-works)
+- [Tokens](#tokens)
 - [Providers](#providers)
-- [Best practices](#best-practices)
+- [Building a container](#building-a-container)
+- [Resolving services](#resolving-services)
+- [Lifetime](#lifetime)
+- [Conflict policy](#conflict-policy)
+- [Errors](#errors)
+- [Testing](#testing)
+- [Upgrading from 1.x](#upgrading-from-1x)
 - [License](#license)
 
 ## Installation
 
 Needle is published as an ES module and requires Node.js 22.12 or later.
 
-Install with npm:
-
 ```sh
-npm install --save @hemjs/needle
+npm install @hemjs/needle
 ```
-
-Install with yarn:
-
-```sh
-yarn add @hemjs/needle
-```
-
-Install with pnpm:
 
 ```sh
 pnpm add @hemjs/needle
 ```
 
+```sh
+yarn add @hemjs/needle
+```
+
+CommonJS code can still load it with `require()`, which Node.js 22.12 and later support for ES modules.
+
 ## Quick start
 
-```tsx
+```ts
 import { Needle } from '@hemjs/needle';
 
-// Placeholder for a class that interacts with user data storage (implementation not shown).
-class UserRepository {}
+interface User {
+  id: number;
+  name: string;
+}
 
-// Service for managing user-related operations. It depends on UserRepository to access user data.
+class UserRepository {
+  #users = new Map<number, User>([[1, { id: 1, name: 'Ada' }]]);
+
+  find(id: number): User | undefined {
+    return this.#users.get(id);
+  }
+}
+
 class UserService {
-  userRepository: UserRepository;
+  #userRepository: UserRepository;
 
   constructor(userRepository: UserRepository) {
-    this.userRepository = userRepository;
+    this.#userRepository = userRepository;
   }
 
-  // Example method using UserRepository to retrieve a user by ID
-  async getUserById(userId: number): Promise {
-    return this.userRepository.getUserById(userId);
-  }
-}
-
-// Define providers for Needle to create and manage services and their dependencies
-const providers = [
-  {
-    // Register UserRepository as a provider, using the class itself as the implementation
-    provide: UserRepository.name,
-    useClass: UserRepository,
-  },
-
-  {
-    // Register UserService as a provider, using a factory function to create it with its dependency
-    provide: UserService.name,
-    useFactory: (container: Container) =>
-      new UserService(container.get<UserRepository>(UserRepository.name)),
-  },
-  {
-    // Provide application configuration object
-    provide: 'config',
-    useValue: { name: 'My App', version: '1.0.0' },
-  },
-];
-
-// Create a Needle container with the defined providers
-const container = new Needle(providers);
-
-// Usage:
-const userService = container.get<UserService>(UserService.name);
-const user = await userService.getUserById(123); // Fetch a user with ID 123
-console.log(user);
-
-const config = container.get<any>('config'); // Access the configuration object
-console.log(config.name); // Output: "My App"
-```
-
-## Introduction
-
-Needle streamlines dependency management in your JavaScript and TypeScript applications, empowering you to:
-
-- **Write cleaner, more organized code:** Achieve clear separation of concerns and eliminate repetitive code for better readability and maintainability.
-- **Test with confidence:** Effortlessly inject test doubles for isolated, reliable tests that ensure code quality.
-- **Focus on your logic, not managing dependencies:** Needle handles the dependency graph for you, freeing you to write efficient and maintainable code.
-
-Whether you're building small web apps or complex enterprise applications, Needle simplifies dependency management and boosts your development experience (e.g., increased speed, improved maintainability).
-
-```tsx
-class Engine {
-  start() {
-    console.log('Engine started!');
+  greet(id: number): string {
+    const user = this.#userRepository.find(id);
+    return user ? `Hello, ${user.name}!` : 'Hello, stranger!';
   }
 }
 
-class Car {
-  private engine: Engine = new Engine();
+const USER_REPOSITORY = Symbol('UserRepository');
+const USER_SERVICE = Symbol('UserService');
 
-  start() {
-    this.engine.start();
-  }
-}
-
-(() => {
-  const car = new Car();
-  car.start();
-})();
-```
-
-Here, while the `Car` class depends on an `Engine` instance to function, the current implementation tightly couples the two. This means the `Car` class is directly responsible for acquiring its own `Engine` dependency, leading to potential drawbacks:
-
-- **Limited flexibility:** The `Car` is restricted to using a single `Engine` implementation. If you need variations (e.g., `Gasoline` or `Electric` engines), you would have to create separate `Car` classes, increasing code duplication and maintenance overhead.
-- **Testing challenges:** The hard dependency on `Engine` makes it difficult to isolate and test `Car` independently. You're unable to easily substitute `Engine` with mock or test doubles for different test scenarios.
-
-Dependency injection to the rescue!
-
-```tsx
-class Engine {
-  start() {
-    console.log('Engine started!');
-  }
-}
-
-class Car {
-  constructor(private engine: Engine) {}
-
-  start() {
-    this.engine.start();
-  }
-}
-
-(() => {
-  const engine = new Engine();
-  const car = new Car(engine);
-  car.start();
-})();
-```
-
-By shifting the `Engine` creation outside of `Car` and accepting it as a constructor argument, we achieve loose coupling. This means `Car` no longer depends on a specific `Engine` implementation, making it more adaptable. This DI approach offers:
-
-- **Enhanced reusability:** You can pass in different `Engine` implementations (e.g., `ElectricEngine`, `HydrogenEngine`) without code changes in `Car` itself, promoting code flexibility and reusability.
-- **Simplified testing:** You can inject mock or test doubles of `Engine` (e.g., `FakeEngine`) during testing, enabling precise control over `Car`'s behavior in various test scenarios, leading to more reliable and comprehensive tests.
-
-Dependency injection is simple: providing specific objects your code needs. Needle streamlines this process, making it easier to manage the creation and delivery of these objects (services) within your code, promoting loose coupling and testability. A service, in this context, is any value, function, or feature an application needs.
-
-## Features
-
-### Configuration clarity
-
-Needle embraces programmatic configuration with intuitive provider objects. Each object is defined in a concise structure, making understanding and maintaining them effortless. Whether you're using `ValueProvider` for constants, `ClassProvider` for constructor-less classes, `FactoryProvider` for dynamic logic, or `ExistingProvider` for aliases, Needle offers the flexibility to perfectly match your needs.
-
-### Dependency resolution
-
-Needle tackles even the most intricate dependency graphs with ease. It resolves circular and transitive services seamlessly, saving you the headache of manual management.
-
-### Error handling
-
-Needle gracefully handles configuration and service creation failures, providing informative messages and exceptions to guide you. Debugging becomes a breeze.
-
-## Container
-
-Needle's container manages and delivers the building blocks your application needs, ensuring efficient service creation and access.
-
-### Instantiating a container
-
-Create a new Needle instance using the new Needle() constructor. Optionally, pass an array of provider definitions:
-
-```tsx
 const container = new Needle([
-  { provide: LoggerService.name, useClass: LoggerService },
+  { provide: USER_REPOSITORY, useClass: UserRepository },
+  {
+    provide: USER_SERVICE,
+    useFactory: (c) => new UserService(c.get<UserRepository>(USER_REPOSITORY)),
+  },
+]);
+
+const userService = container.get<UserService>(USER_SERVICE);
+console.log(userService.greet(1)); // Hello, Ada!
+```
+
+## How it works
+
+Dependency injection means a class receives the things it depends on instead of creating them itself. A `UserService` that is given a `UserRepository` can be tested with a fake repository, and can be pointed at a different store without changing its code.
+
+Needle is the piece that does the giving. You register **providers**, each of which tells Needle how to produce one service and which **token** identifies it. When you ask the container for a token, it finds the provider and returns the service:
+
+- **Values** are returned as given.
+- **Classes** are constructed, and **factories** called, the first time the service is needed. A factory receives the container, so it can ask for the services it depends on.
+- **Aliases** point one token at another.
+
+Services are created lazily, on the first `get`, and by default only once.
+
+A common way to set Needle up is to create one container when your application starts, with all the providers it needs, add any extras with `addProvider`, and export it for the rest of the application to use.
+
+## Tokens
+
+A token is the key a service is registered and requested under. It can be a string or a symbol.
+
+Symbols are the safest choice: two symbols never collide, even when their descriptions match. Export them from the module that defines the service:
+
+```ts
+export const LOGGER = Symbol('Logger');
+```
+
+Strings are convenient for configuration values and when tokens are shared across packages, such as `'config'` or `'http.client'`.
+
+Avoid deriving tokens from class names (`Logger.name`). Minifiers rename classes, and two classes with the same name in different modules would share a token.
+
+The examples below use symbols for services, such as `LOGGER` and `CLOCK`, and short strings for configuration values and where only the shape of an example matters.
+
+## Providers
+
+Every provider has a `provide` token and exactly one of the following keys, which says how the service is produced.
+
+### Values: `useValue`
+
+Registers an existing value. Use it for configuration, constants, or objects created elsewhere:
+
+```ts
+const container = new Needle([
+  { provide: 'config', useValue: { port: 8080, debug: false } },
+]);
+
+container.get('config'); // { port: 8080, debug: false }
+```
+
+The value is returned exactly as given on every `get`, so the same object is always shared. `null` and `undefined` are valid values.
+
+### Classes: `useClass`
+
+Creates the service by calling `new` on a class:
+
+```ts
+class Clock {
+  now(): Date {
+    return new Date();
+  }
+}
+
+const container = new Needle([{ provide: CLOCK, useClass: Clock }]);
+```
+
+Needle does not pass arguments to the constructor, so the class must be constructible without them. Parameters with default values are fine. If a class needs other services, register it with a factory instead.
+
+Needle checks the class when it is registered: a value that cannot be called with `new` throws `InvalidClassError`, and a constructor with required parameters throws `InvalidConstructorError`.
+
+### Factories: `useFactory`
+
+Creates the service by calling a function. The function receives the container, so it can request the services it depends on:
+
+```ts
+const container = new Needle([
+  { provide: 'config', useValue: { greeting: 'Hello' } },
+  {
+    provide: GREETER,
+    useFactory: (c) => {
+      const { greeting } = c.get<{ greeting: string }>('config');
+      return (name: string) => `${greeting}, ${name}!`;
+    },
+  },
+]);
+
+container.get<(name: string) => string>(GREETER)('Ada'); // Hello, Ada!
+```
+
+Factories are the way to build services that take constructor arguments, choose an implementation at runtime, or need setup before use. A factory that is not a function throws `InvalidFactoryError` when it is registered.
+
+Inside a provider list, TypeScript infers the factory's parameter type. A factory written as a separate function can type its parameter with `Container` from [`@armscye/container`](https://www.npmjs.com/package/@armscye/container), the package that defines Needle's types. Add it to your own dependencies to import from it:
+
+```ts
+import type { Container } from '@armscye/container';
+
+export function createGreeter(c: Container) {
+  const { greeting } = c.get<{ greeting: string }>('config');
+  return (name: string) => `${greeting}, ${name}!`;
+}
+```
+
+### Aliases: `useExisting`
+
+Makes one token refer to another provider. Both tokens then return the same service:
+
+```ts
+const container = new Needle([
+  { provide: LOGGER, useClass: ConsoleLogger },
+  { provide: 'logger', useExisting: LOGGER }, // an older token, kept working
+]);
+
+container.get('logger') === container.get(LOGGER); // true
+```
+
+Aliases are useful for giving a service a second, more specific name, or for keeping an old token working after renaming it. An alias can point at another alias; Needle follows the chain to the provider at its end.
+
+An alias has no lifetime of its own. It returns whatever its target returns, so aliasing a singleton gives the same instance and aliasing a transient service gives a new one each time.
+
+Aliases that form a loop, such as `a -> b -> a`, throw `CircularAliasError` when the container is created or, for `addProvider`, when the alias is added.
+
+## Building a container
+
+Pass the providers to the constructor:
+
+```ts
+const container = new Needle([
+  { provide: 'config', useValue: config },
+  { provide: LOGGER, useClass: ConsoleLogger },
 ]);
 ```
 
-### Adding providers dynamically
+Register more providers later with `addProvider`. It returns the container, so calls can be chained:
 
-Register providers with the container after its creation using the `addProvider` method:
-
-```tsx
-container.addProvider({ provide: 'LOGGER', useExisting: LoggerService.name });
+```ts
+container
+  .addProvider({ provide: CLOCK, useClass: SystemClock })
+  .addProvider({ provide: TIME_SOURCE, useExisting: CLOCK });
 ```
 
-### Using the container
+Providers are validated as they are registered. An error for a provider in the constructor's list includes its position, which helps when the list is assembled from several modules:
 
-Once providers are registered, retrieve instances using the `get` method and their corresponding token:
-
-```tsx
-const loggerService = container.get<LoggerService>(LoggerService.name);
-const loggerService = container.get<LoggerService>('LOGGER');
+```text
+InvalidProviderError: Invalid provider definition detected; only instances of Provider are allowed, got: [{"provide":"broken"}] at index 12.
 ```
 
-### Conflict policy
+The constructor also accepts options:
+
+| Option           | Values                              | Default       | See                                 |
+| ---------------- | ----------------------------------- | ------------- | ----------------------------------- |
+| `lifetime`       | `'singleton'`, `'transient'`        | `'singleton'` | [Lifetime](#lifetime)               |
+| `conflictPolicy` | `'override'`, `'error'`, `'ignore'` | `'override'`  | [Conflict policy](#conflict-policy) |
+
+The options object is typed as `NeedleOptions`, and `ConflictPolicy` is the type of `conflictPolicy`. Both are exported, which helps when options are assembled in a module of their own.
+
+## Resolving services
+
+Use `get` to obtain a service and `has` to check whether one is registered:
+
+```ts
+const logger = container.get<Logger>(LOGGER);
+
+if (container.has(METRICS)) {
+  container.get<Metrics>(METRICS).increment('startup');
+}
+```
+
+`get` throws `ProviderNotFoundError` when nothing is registered for the token. For an alias whose target is missing, `has` returns `false` and the error names the missing target.
+
+The type argument of `get` is not checked against what is registered: `get<Logger>(CLOCK)` compiles and returns the clock. Keep each token's type next to the token, for example in the module that exports it.
+
+### Dependencies between services
+
+Factories resolve their dependencies by calling `get` on the container they receive. Needle creates each dependency on demand, so dependencies can appear anywhere in the list:
+
+```ts
+const container = new Needle([
+  {
+    provide: ORDER_SERVICE,
+    useFactory: (c) => new OrderService(c.get(ORDER_REPOSITORY), c.get(LOGGER)),
+  },
+  { provide: ORDER_REPOSITORY, useClass: InMemoryOrderRepository },
+  { provide: LOGGER, useClass: ConsoleLogger },
+]);
+```
+
+### Optional dependencies
+
+`get` throws for a token with no provider, so a factory that can work without a service should check for it with `has` first:
+
+```ts
+const container = new Needle([
+  {
+    provide: MAILER,
+    useFactory: (c) =>
+      new Mailer(c.has(METRICS) ? c.get<Metrics>(METRICS) : null),
+  },
+]);
+```
+
+The mailer then works whether or not metrics are configured. `has` follows aliases, so it also answers for a token that is an alias of a registered service.
+
+### Circular dependencies
+
+Two services that need each other while being created cannot both be built first. Needle detects this and throws `CircularDependencyError` with the cycle:
+
+```ts
+const container = new Needle([
+  { provide: 'a', useFactory: (c) => new A(c.get('b')) },
+  { provide: 'b', useFactory: (c) => new B(c.get('a')) },
+]);
+
+container.get('a'); // CircularDependencyError: Circular dependency detected: a -> b -> a
+```
+
+To break a cycle, let one side look up the other when it first uses it rather than while it is being created:
+
+```ts
+const container = new Needle([
+  { provide: 'a', useFactory: (c) => new A(() => c.get('b')) },
+  { provide: 'b', useFactory: (c) => new B(c.get('a')) },
+]);
+```
+
+## Lifetime
+
+A provider's lifetime decides whether `get` reuses one instance or creates a new one each time. It applies to class and factory providers:
+
+| Lifetime    | Behavior                                                                  |
+| ----------- | ------------------------------------------------------------------------- |
+| `singleton` | Created on the first `get`, then the same instance is returned. (Default) |
+| `transient` | Created again on every `get`.                                             |
+
+```ts
+const container = new Needle([
+  { provide: CLOCK, useClass: Clock },
+  {
+    provide: REQUEST_ID,
+    useFactory: () => crypto.randomUUID(),
+    lifetime: 'transient',
+  },
+]);
+
+container.get(CLOCK) === container.get(CLOCK); // true
+container.get(REQUEST_ID) === container.get(REQUEST_ID); // false
+```
+
+To change the default for every provider, pass `lifetime` to the constructor. A `lifetime` on a provider always takes precedence:
+
+```ts
+const container = new Needle(
+  [
+    { provide: REQUEST_ID, useFactory: () => crypto.randomUUID() }, // transient
+    { provide: CLOCK, useClass: Clock, lifetime: 'singleton' }, // singleton
+  ],
+  { lifetime: 'transient' },
+);
+```
+
+Value providers always return the value they were given, and aliases follow the lifetime of their target.
+
+## Conflict policy
 
 A conflict happens when a provider is registered for a token that already has one, either within the constructor's list or through `addProvider`. The `conflictPolicy` option decides what happens:
 
-| Value      | Description                                                                            |
+| Policy     | Behavior                                                                               |
 | ---------- | -------------------------------------------------------------------------------------- |
 | `override` | The new provider replaces the previous one; the last registration wins. (Default)      |
 | `error`    | Needle throws a `ProviderConflictError` naming the token and, for the list, its index. |
@@ -216,267 +353,109 @@ A conflict happens when a provider is registered for a token that already has on
 
 Every provider is validated before the policy applies, so an invalid provider is reported whatever the policy.
 
-By default, Needle uses `override`. This lets later providers replace earlier ones, for example when an application's configuration overrides defaults supplied by a library:
+`override` lets later providers replace earlier ones, for example when an application overrides defaults supplied by a library:
 
-```tsx
+```ts
 const container = new Needle([
-  { provide: 'LOGGER', useClass: ConsoleLogger }, // library default
-  { provide: 'LOGGER', useClass: FileLogger }, // application override
+  { provide: LOGGER, useClass: ConsoleLogger }, // library default
+  { provide: LOGGER, useClass: FileLogger }, // application override
 ]);
 
-container.get('LOGGER'); // FileLogger
+container.get(LOGGER); // a FileLogger
 ```
 
 Replacing a provider does not affect services that were already created with the previous one; they keep the instance they received.
 
 Use `error` when every token should have exactly one provider, so that two modules claiming the same token are caught when the container is created:
 
-```tsx
+```ts
 const container = new Needle(providers, { conflictPolicy: 'error' });
-// ProviderConflictError: A provider for "LOGGER" is already registered; conflicting provider at index 12.
+// ProviderConflictError: A provider for "Symbol(Logger)" is already registered; conflicting provider at index 12.
 ```
 
 Use `ignore` when the providers registered first should win, such as test doubles placed ahead of the application's providers:
 
-```tsx
+```ts
 const container = new Needle(
-  [{ provide: 'MAILER', useValue: fakeMailer }, ...providers],
+  [{ provide: MAILER, useValue: fakeMailer }, ...providers],
   { conflictPolicy: 'ignore' },
 );
 ```
 
-### Lifetime
+## Errors
 
-The `lifetime` option controls whether a service instance is reused across resolutions or a new instance is created each time. It accepts two values:
+Every error Needle throws extends `NeedleError`, and each has its own class and `name`, so you can tell them apart:
 
-| Value       | Description                                                                    |
-| ----------- | ------------------------------------------------------------------------------ |
-| `singleton` | The instance is resolved once, cached, and reused for all subsequent requests. |
-| `transient` | A new instance is created for every resolution request.                        |
+```ts
+import { ProviderNotFoundError } from '@hemjs/needle';
 
-By default, Needle uses `singleton` lifetime, meaning that calling `get` multiple times for the same token returns the same instance:
-
-```tsx
-const container = new Needle([
-  { provide: LoggerService.name, useClass: LoggerService },
-]);
-
-const obj1 = container.get<LoggerService>(LoggerService.name);
-const obj2 = container.get<LoggerService>(LoggerService.name);
-
-console.log(obj1 === obj2); // Output: true
+let payments: Payments;
+try {
+  payments = container.get<Payments>(PAYMENTS);
+} catch (error) {
+  if (!(error instanceof ProviderNotFoundError)) {
+    throw error;
+  }
+  payments = new NoopPayments();
+}
 ```
 
-To create a new instance on every resolution, set `lifetime: 'transient'` on the provider:
+To handle every container error in one place, check for `NeedleError` instead.
 
-```tsx
-const container = new Needle([
-  {
-    provide: LoggerService.name,
-    useClass: LoggerService,
-    lifetime: 'transient',
-  },
-]);
+| Error                     | Thrown when                                                                    |
+| ------------------------- | ------------------------------------------------------------------------------ |
+| `InvalidProviderError`    | A provider has no valid `useValue`, `useClass`, `useFactory` or `useExisting`. |
+| `InvalidClassError`       | `useClass` is not something that can be called with `new`.                     |
+| `InvalidConstructorError` | `useClass` has a constructor with required parameters.                         |
+| `InvalidFactoryError`     | `useFactory` is not a function.                                                |
+| `ProviderConflictError`   | A token is registered twice under the `error` conflict policy.                 |
+| `CircularAliasError`      | Aliases form a loop.                                                           |
+| `ProviderNotFoundError`   | `get` is called for a token with no provider.                                  |
+| `CircularDependencyError` | Services depend on each other while being created.                             |
+| `ServiceNotCreatedError`  | A constructor or factory throws while creating a service.                      |
 
-const obj1 = container.get<LoggerService>(LoggerService.name);
-const obj2 = container.get<LoggerService>(LoggerService.name);
+The first six are thrown when a provider is registered, so most configuration mistakes surface as soon as the container is created. The last three are thrown by `get`.
 
-console.log(obj1 === obj2); // Output: false
+When a constructor or factory throws, Needle wraps the error once, at the service that failed, and shows the chain of services that led there. The original error is kept as `cause`:
+
+```text
+ServiceNotCreatedError: Service for "Engine" could not be created (Car -> Engine). Reason: no fuel
 ```
 
-To change the default lifetime for all providers, pass the `lifetime` option to the constructor:
+After any error, the container stays usable for other services.
 
-```tsx
-const container = new Needle(
-  [{ provide: LoggerService.name, useClass: LoggerService }],
-  { lifetime: 'transient' },
-);
+## Testing
 
-const obj1 = container.get<LoggerService>(LoggerService.name);
-const obj2 = container.get<LoggerService>(LoggerService.name);
+To test with doubles, build a container from the application's providers and register the doubles after them. With the default `override` policy, the later provider replaces the real one:
 
-console.log(obj1 === obj2); // Output: false
+```ts
+const container = new Needle(providers);
+container.addProvider({ provide: MAILER, useValue: fakeMailer });
+
+container.get(MAILER) === fakeMailer; // true
 ```
 
-A provider-level `lifetime` always overrides the global option:
+Services that depend on `MAILER` now receive `fakeMailer` when they are created.
 
-```tsx
-const container = new Needle(
-  [
-    {
-      provide: LoggerService.name,
-      useClass: LoggerService,
-      lifetime: 'singleton',
-    },
-  ],
-  { lifetime: 'transient' },
-);
+Register the doubles before anything that depends on them is first resolved. A service that was already created keeps the instance it received.
 
-const obj1 = container.get<LoggerService>(LoggerService.name);
-const obj2 = container.get<LoggerService>(LoggerService.name);
+If the application uses the `error` conflict policy, replacing a provider throws. Place the doubles first and use `ignore` instead, as shown under [Conflict policy](#conflict-policy).
 
-console.log(obj1 === obj2); // Output: true
-```
+## Upgrading from 1.x
 
-### Dependency resolution
+Version 2 narrows the container to a small public API and reports problems earlier. Most applications only need the changes in the first three items.
 
-The container performs service dependency resolution as follows:
-
-- For each service, Needle analyzes its constructor arguments to identify dependencies, which can be either actual values or references to other registered services.
-- This information is then used to construct a dependency graph where each service is a node and the connections between nodes represent their required dependencies.
-- When a service is requested, Needle efficiently navigates the dependency graph, starting from the requesting service and following the connections to identify all its required dependencies.
-- Notably, Needle avoids creating services until they are actually needed, optimizing memory usage and performance.
-- Based on the defined providers and configuration, Needle selects the appropriate implementation for each service.
-- Needle then creates the necessary dependent objects and injects them into the requesting service, fulfilling its needs and completing the dependency chain.
-- Optionally, Needle stores instances of shared services for faster retrieval in the future.
-
-### Error handling
-
-Needle prioritizes error handling throughout the dependency resolution process, proactively catching potential issues early and providing informative messages to streamline debugging efforts. The Needle container thoroughly validates provider configurations during creation. If it detects issues like circular dependencies, incorrect provider types, or missing information, it throws an error pinpointing the problematic configuration:
-
-- If a request is made for an unregistered service, the container immediately throws an error clearly identifying the missing provider.
-- If a service's constructor throws an error during object creation, Needle propagates the error along with context that identifies the service involved and the reason for the failure.
-- If a circular dependency is detected, it throws an error pinpointing the involved services and the circular path.
-
-For example, two factories that each need the other while being created:
-
-```tsx
-const container = new Needle([
-  { provide: 'a', useFactory: (c: Container) => new A(c.get('b')) },
-  { provide: 'b', useFactory: (c: Container) => new B(c.get('a')) },
-]);
-
-container.get('a'); // Error: Circular dependency detected: a -> b -> a
-```
-
-To break a cycle, defer one side of it: resolve the dependency when it is first used rather than while the service is being created.
-
-```tsx
-const container = new Needle([
-  { provide: 'a', useFactory: (c: Container) => new A(() => c.get('b')) },
-  { provide: 'b', useFactory: (c: Container) => new B(c.get('a')) },
-]);
-```
-
-## Providers
-
-A Needle container manages one or more providers. These providers tell the container how to create and manage the services your application needs to function.They are created based on provider definitions supplied to the container.
-
-A provider definition is essentially a blueprint for constructing the services your application needs. When instructed to provide a specific service (identified by its token), the Needle container consults the corresponding blueprint and uses its instructions to either create a new instance or retrieve an existing one.
-
-### Provider configuration
-
-Provider configurations define how services are created and accessed within the Needle container. Different provider types offer flexibility on how services are created (static values, classes, factories, aliases). Use the appropriate provider type based on the service's complexity and requirements.
-
-Each provider configuration is represented by an object with two key properties:
-
-- The `provide` property holds a unique token (usually a string or symbol) that serves as the key for both locating a service instance and configuring the container.
-- The provider definition object property tells the container how to create the service instance. The provider-definition key can be one of the following:
-  - `useValue`: Provides a fixed, static value to be used as the service, often used for configuration constants or mock data.
-  - `useClass`: Instructs the container to create a new instance of the specified class when the service is injected.
-  - `useFactory`: Defines a function that takes responsibility for constructing the service, enabling dynamic creation logic.
-  - `useExisting`: Creates an alias for an existing token, allowing multiple access paths to the same service instance.
-
-**Token naming conventions**
-
-Naming tokens in Needle typically follows these conventions:
-
-- **For classes**: Use the name of the class associated with the service, suffixed with `.name`. For example, `UserRepository.name`, `UserService.name`, `UserHandler.name`, `Logger.name`, etc.
-- **For other cases**: Any string constant or symbol is acceptable. For example, `'config'`, `API_URL`, etc.
-
-Naming tokens consistently makes your configuration easier to read and understand.
-
-### Value providers: useValue
-
-The `useValue` key lets you register fixed values directly with the container, making them easily accessible for injection into other parts of your application. This is ideal for registering application configuration constants. You can also use a value provider in a unit test to provide mock data in place of a production data service.
-
-The following example registers application configurations identified by a unique string token (`'config'`).
-
-```tsx
-const container = new Needle([
-  { provide: 'config', useValue: { name: 'My App', version: '1.0.0' } },
-]);
-
-const config = container.get('config');
-```
-
-### Class providers: useClass
-
-The `useClass` provider key lets you create and return a new instance of a class with a default (no-argument) constructor.
-
-In the following example, `UserService` class must have a default constructor. Otherwise, an appropriate error is thrown to prevent unexpected behavior.
-
-```tsx
-const container = new Needle([
-  { provide: UserService.name, useClass: UserService },
-]);
-
-const userService = container.get<UserService>(UserService.name);
-```
-
-### Factory providers: useFactory
-
-The `useFactory` provider key lets you create a service instance by calling a factory function. The factory function provides an advanced configuration mechanism capable of managing services that require complex initialization steps, conditional logic, or late binding of dependencies.
-
-**Using factory provider**
-
-- Write a function that receives the Needle container instance as an argument and returns the desired service instance.
-- Specify the token for your service and provide the factory function.
-- Add the factory provider to your Needle container.
-
-```tsx
-const userServiceFactory = (container: Container) => {
-  const userRepository = container.get<UserRepository>(UserRepository.name);
-  return new UserService(userRepository);
-};
-
-const container = new Needle([
-  { provide: UserService.name, useFactory: userServiceFactory },
-]);
-
-const userService = container.get<UserService>(UserService.name);
-```
-
-**Tips**
-
-- Factory functions should avoid side effects and focus solely on creating the service instance.
-- Leverage container access to inject other services within the factory for dependency management.
-
-### Alias providers: useExisting
-
-The `useExisting` provider key lets you map one token to another. In effect, the first token is an alias for the service associated with the second token, creating two ways to access the same service instance. An alias can also be mapped to another alias (it will be resolved recursively).
-
-In the following example, retrievals using either the `ErrorHandler.name` token or the `'ERROR_HANDLER'` token provide access to the same ErrorHandler instance.
-
-```tsx
-const container = new Needle([
-  { provide: ErrorHandler.name, useClass: ErrorHandler },
-  { provide: 'ERROR_HANDLER', useExisting: ErrorHandler.name },
-]);
-
-const errorHandler1 = container.get<ErrorHandler>(ErrorHandler.name);
-const errorHandler2 = container.get<ErrorHandler>('ERROR_HANDLER');
-```
-
-An alias has no lifetime of its own; it follows the [lifetime](#lifetime) of the provider it resolves to. Aliasing a `singleton` returns that same instance, while aliasing a `transient` provider creates a new instance on every resolution.
-
-Aliases can be particularly valuable in several situations, such as when:
-
-- Different components need a specific access point for a shared service. Each component can use an alias token tailored to its context, improving code clarity and isolation.
-- Renaming internal service identifiers without impacting dependent components. Aliases allow smooth refactoring by creating new references while maintaining existing connections.
-- Providing descriptive or context-specific names for services. You can tailor aliases to better reflect the service's usage within a specific component or integration scenario.
-
-## Best practices
-
-- Choose the right provider type (value, class, factory, alias) based on your service's complexity and creation requirements.
-- Choose clear and meaningful names for service tokens, as they act as documentation and entry points for your dependencies.
-- Use the shared nature of service instances strategically to improve performance and memory usage, especially for singletons or frequently accessed services.
-- Use logging responsibly to monitor container activity and troubleshoot issues without sacrificing performance.
-- Before deployment, test your provider configurations and dependencies to prevent potential issues.
-- Verify provider configurations during container creation to catch issues early.
+- **ES modules.** Needle is published as an ES module and requires Node.js 22.12 or later. On those versions, CommonJS code can still `require()` it.
+- **`shared` is replaced by `lifetime`.** Replace `shared: true` with `lifetime: 'singleton'` and `shared: false` with `lifetime: 'transient'`, both on providers and in the constructor's options.
+- **The public API is the constructor, `get`, `has` and `addProvider`.** `initialize()` is removed: pass providers to the constructor or call `addProvider`. `isInitialized`, `options`, the internal maps (`services`, `records`, `aliases`) and helper methods such as `isValueProvider` are no longer accessible.
+- **Aliases follow their target's lifetime.** `useExisting` providers no longer accept `lifetime` or `shared`; an alias returns whatever its target returns.
+- **The last registration for a token wins.** Registering a token again replaces its previous provider, including any instance already created for it. Use the [conflict policy](#conflict-policy) to make duplicates an error or to keep the first registration instead.
+- **Problems are reported earlier.** Factories that are not functions and `useClass` values that cannot be constructed now fail when they are registered rather than on `get`. Circular dependencies throw `CircularDependencyError` instead of overflowing the stack.
+- **Errors are exported.** All error classes can be imported and checked with `instanceof`, and several messages are clearer. Code that matched error message text may need updating.
+- **Types.** Needle now uses `@armscye/container` 0.8, whose provider types no longer include `shared`.
 
 ## License
 
 This project is licensed under the **MIT license**.
 
-See [LICENSE](LICENSE) for more information.
+See [LICENSE](./LICENSE) for more information.
