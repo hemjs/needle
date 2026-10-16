@@ -167,8 +167,8 @@ importers:
   .:
     dependencies:
       '@armscye/container':
-        specifier: ^0.8.0
-        version: 0.8.0
+        specifier: ^0.8.1
+        version: 0.8.1
       '@armscye/core':
         specifier: ^0.5.0
         version: 0.5.0
@@ -245,12 +245,8 @@ packages:
     resolution: {integrity: sha512-9ytjzGwxjm9Uz7I9avfbt5vlQt6uk9uRRESzJjqrznl6WKvI6dwYTo+vJ3U02Wrq/mR3iql/PzhvHhKdJIAjDQ==}
     engines: {node: '>=20'}
 
-  '@armscye/container@0.8.0':
-    resolution: {integrity: sha512-V/5MZHedjCZSF6V45hyuj726WX9rTK3VGmmJTqnJOjXDIsVXJvggU4xkSvoTcMohwPIsok9kr0IydOoifW2A0g==}
-    engines: {node: '>=20.19.0'}
-
-  '@armscye/core@0.4.4':
-    resolution: {integrity: sha512-2jyuHhbDLAF60hmaOKF4RTVBbz/PWGWoyP1+4rWAydamqVkohnO8E2t8Jzt42ZsvmhFlTRu1ahU/kfn6ugheiA==}
+  '@armscye/container@0.8.1':
+    resolution: {integrity: sha512-Up4b5zL8r7dir8TsZGzR0F+RNW5b3v2n9fzpBJTFnmk/S+NMKqijJoX9/rgsl2NrmBDf77fYY6S9NF3GgWzorw==}
     engines: {node: '>=20.19.0'}
 
   '@armscye/core@0.5.0':
@@ -2298,11 +2294,9 @@ snapshots:
       typescript: 5.6.1-rc
       validate-npm-package-name: 5.0.1
 
-  '@armscye/container@0.8.0':
+  '@armscye/container@0.8.1':
     dependencies:
-      '@armscye/core': 0.4.4
-
-  '@armscye/core@0.4.4': {}
+      '@armscye/core': 0.5.0
 
   '@armscye/core@0.5.0': {}
 
