@@ -4,8 +4,13 @@
     "rootDir": "src",
     "outDir": "dist",
     "types": [],
+    "allowJs": false,
+    "checkJs": false,
     "noEmit": false,
-    "declaration": true
+    "declaration": true,
+    "declarationMap": false,
+    "sourceMap": false,
+    "removeComments": false
   },
   "include": ["src"]
 }

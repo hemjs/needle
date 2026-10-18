@@ -21,7 +21,7 @@ class BrokenEngine {
 class DashboardSoftware {}
 
 class Dashboard {
-  constructor(software: DashboardSoftware) {}
+  constructor(_software: DashboardSoftware) {}
 }
 
 class TurboEngine extends Engine {}
@@ -243,7 +243,7 @@ test('Needle handles optional dependencies gracefully', () => {
   const needle = new Needle([
     {
       provide: CarWithOptionalEngine.name,
-      useFactory: (container: Container) => new CarWithOptionalEngine(),
+      useFactory: () => new CarWithOptionalEngine(),
     },
   ]);
   const car = needle.get<CarWithOptionalEngine>(CarWithOptionalEngine.name);
@@ -520,7 +520,7 @@ test('Needle rethrows errors from provider constructors (useFactory)', () => {
   const needle = new Needle([
     {
       provide: BrokenEngine.name,
-      useFactory: (container: Container) => new BrokenEngine(),
+      useFactory: () => new BrokenEngine(),
     },
   ]);
   expect(() => needle.get(BrokenEngine.name)).toThrow(

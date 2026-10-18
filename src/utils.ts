@@ -16,7 +16,7 @@ export function stringify(value: unknown): string {
 
 function serialize(value: object): string {
   const seen = new WeakSet<object>();
-  return JSON.stringify(value, (key, item: unknown) => {
+  return JSON.stringify(value, (_key, item: unknown) => {
     if (
       typeof item === 'symbol' ||
       typeof item === 'function' ||
