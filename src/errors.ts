@@ -22,19 +22,19 @@ export class CircularDependencyError extends NeedleError {
 }
 
 export class InvalidClassError extends NeedleError {
-  constructor(value: any) {
+  constructor(value: unknown) {
     super(INVALID_CLASS(stringify(value)));
   }
 }
 
 export class InvalidConstructorError extends NeedleError {
-  constructor(value: any) {
+  constructor(value: unknown) {
     super(INVALID_CONSTRUCTOR(stringify(value)));
   }
 }
 
 export class InvalidFactoryError extends NeedleError {
-  constructor(value: any, index?: number) {
+  constructor(value: unknown, index?: number) {
     super(INVALID_FACTORY(typeof value, atIndex(index)));
   }
 }
@@ -54,7 +54,7 @@ export class ProviderConflictError extends NeedleError {
 }
 
 export class InvalidProviderError extends NeedleError {
-  constructor(value: any, index?: number) {
+  constructor(value: unknown, index?: number) {
     super(INVALID_PROVIDER(stringify(value), atIndex(index)));
   }
 }
