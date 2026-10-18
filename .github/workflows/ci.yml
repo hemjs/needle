@@ -11,26 +11,12 @@ permissions:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  # Only supersede PR runs; every push to main keeps its own result.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  lint:
-    name: Lint
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@v6
-      - uses: actions/setup-node@v7
-        with:
-          node-version-file: .nvmrc
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm run lint
-      - run: pnpm run format:check
-      - run: pnpm run typecheck
-
-  test:
-    name: Test (Node ${{ matrix.node }})
+  check:
+    name: Node ${{ matrix.node }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -38,46 +24,56 @@ jobs:
         # The oldest supported version (engines.node), then each newer line.
         node: ['22.12.0', '24', '26']
     steps:
-      - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@v6
-      - uses: actions/setup-node@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: ${{ matrix.node }}
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - run: pnpm run typecheck
       - run: pnpm run test:cov
+      - run: pnpm run build
 
+  # Runs on the .nvmrc version only: ESLint, its plugins and Prettier need to
+  # run once, and some of them do not support the oldest version above.
   package:
-    name: Package
+    name: Lint and package
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@v6
-      - uses: actions/setup-node@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      # Packs the tarball (building first) and checks what consumers get.
+      - run: pnpm run lint
+      - run: pnpm run format:check
+      # Builds, then checks the packed tarball consumers get.
       - run: pnpm run check:package
 
   renovate-config:
     name: Renovate config
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@v6
-      - uses: actions/setup-node@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc
+      # The script only runs `pnpm dlx`, so skip the install pnpm would
+      # otherwise do before `pnpm run`.
       - run: pnpm run renovate:validate
+        env:
+          pnpm_config_verify_deps_before_run: 'false'
 
-  # The single check to require on main, so job and matrix names can change
-  # without touching the branch ruleset.
+  # The only check the main branch ruleset requires, so the jobs above can be
+  # renamed or re-matrixed freely. Add any new job to `needs`.
   ci-ok:
     name: CI OK
     if: always()
-    needs: [lint, test, package, renovate-config]
+    needs: [check, package, renovate-config]
     runs-on: ubuntu-latest
     steps:
       - if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') || contains(needs.*.result, 'skipped')
