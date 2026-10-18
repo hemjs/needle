@@ -1,2 +1,2 @@
 minimumReleaseAgeExclude:
-  - '@armscye/container@0.8.1'
+  - '@armscye/*'

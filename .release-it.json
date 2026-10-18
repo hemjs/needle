@@ -1,10 +1,11 @@
 {
-  "$schema": "./node_modules/release-it/schema/release-it.json",
+  "$schema": "https://unpkg.com/release-it@21/schema/release-it.json",
   "git": {
     "requireBranch": "main",
     "requireCleanWorkingDir": true,
     "commitMessage": "chore(release): v${version}",
-    "tagAnnotation": "Release v${version}"
+    "tagName": "v${version}",
+    "tagAnnotation": "v${version}"
   },
   "github": {
     "release": true,
@@ -15,11 +16,11 @@
   },
   "hooks": {
     "before:init": [
-      "pnpm run lint",
-      "pnpm run format:check",
-      "pnpm run typecheck",
-      "pnpm run test",
-      "pnpm run check:package"
+      "pnpm format:check",
+      "pnpm lint",
+      "pnpm typecheck",
+      "pnpm test",
+      "pnpm check:package"
     ]
   },
   "plugins": {
