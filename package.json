@@ -43,7 +43,7 @@
     "prepack": "pnpm run build",
     "prepare": "husky",
     "release": "release-it",
-    "renovate:validate": "pnpm dlx --allow-build=re2 --package=renovate@44.132.5 renovate-config-validator --strict",
+    "renovate:validate": "pnpm dlx --allow-build=re2 --package=renovate@44.164.7 renovate-config-validator --strict",
     "test": "vitest run",
     "test:cov": "vitest run --coverage",
     "test:watch": "vitest",
