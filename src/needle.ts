@@ -22,13 +22,7 @@ import {
   ProviderNotFoundError,
   ServiceNotCreatedError,
 } from './errors.js';
-
-export type ConflictPolicy = 'override' | 'error' | 'ignore';
-
-export interface NeedleOptions {
-  lifetime?: Lifetime;
-  conflictPolicy?: ConflictPolicy;
-}
+import type { NeedleOptions } from './types.js';
 
 interface ValueRecord {
   kind: 'value';

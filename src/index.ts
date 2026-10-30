@@ -10,4 +10,5 @@ export {
   ProviderNotFoundError,
   ServiceNotCreatedError,
 } from './errors.js';
-export * from './needle.js';
+export { Needle } from './needle.js';
+export type { ConflictPolicy, NeedleOptions } from './types.js';
