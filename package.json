@@ -34,7 +34,7 @@
   ],
   "scripts": {
     "build": "pnpm run clean && tsc -p tsconfig.build.json",
-    "check:package": "pnpm run build && publint && attw --pack . --profile esm-only",
+    "check:package": "pnpm pack --out package.tgz && publint run package.tgz && attw package.tgz --profile esm-only && rimraf package.tgz",
     "clean": "rimraf dist",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
