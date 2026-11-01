@@ -3,49 +3,76 @@ import type { ProviderToken } from '@armscye/container';
 import { stringify } from './utils.js';
 
 export class NeedleError extends Error {
-  constructor(message: string, options?: ErrorOptions) {
-    super(message, options);
-    this.name = new.target.name;
+  static {
+    setName(this, 'NeedleError');
   }
 }
 
 export class CircularAliasError extends NeedleError {
+  static {
+    setName(this, 'CircularAliasError');
+  }
+
   constructor(path: ProviderToken[]) {
     super(CIRCULAR_ALIAS(path.map(stringify).join(' -> ')));
   }
 }
 
 export class CircularDependencyError extends NeedleError {
+  static {
+    setName(this, 'CircularDependencyError');
+  }
+
   constructor(path: ProviderToken[]) {
     super(CIRCULAR_DEPENDENCY(path.map(stringify).join(' -> ')));
   }
 }
 
 export class InvalidClassError extends NeedleError {
+  static {
+    setName(this, 'InvalidClassError');
+  }
+
   constructor(value: unknown) {
     super(INVALID_CLASS(stringify(value)));
   }
 }
 
 export class InvalidConstructorError extends NeedleError {
+  static {
+    setName(this, 'InvalidConstructorError');
+  }
+
   constructor(value: unknown) {
     super(INVALID_CONSTRUCTOR(stringify(value)));
   }
 }
 
 export class InvalidFactoryError extends NeedleError {
+  static {
+    setName(this, 'InvalidFactoryError');
+  }
+
   constructor(value: unknown, index?: number) {
     super(INVALID_FACTORY(typeof value, atIndex(index)));
   }
 }
 
 export class ProviderNotFoundError extends NeedleError {
+  static {
+    setName(this, 'ProviderNotFoundError');
+  }
+
   constructor(token: ProviderToken) {
     super(PROVIDER_NOT_FOUND(stringify(token)));
   }
 }
 
 export class ProviderConflictError extends NeedleError {
+  static {
+    setName(this, 'ProviderConflictError');
+  }
+
   constructor(token: ProviderToken, index?: number) {
     const location =
       index === undefined ? '' : `; conflicting provider${atIndex(index)}`;
@@ -54,12 +81,20 @@ export class ProviderConflictError extends NeedleError {
 }
 
 export class InvalidProviderError extends NeedleError {
+  static {
+    setName(this, 'InvalidProviderError');
+  }
+
   constructor(value: unknown, index?: number) {
     super(INVALID_PROVIDER(stringify(value), atIndex(index)));
   }
 }
 
 export class ServiceNotCreatedError extends NeedleError {
+  static {
+    setName(this, 'ServiceNotCreatedError');
+  }
+
   constructor(path: ProviderToken[], cause: unknown) {
     const token = stringify(path[path.length - 1]);
     const route =
@@ -98,4 +133,12 @@ const SERVICE_NOT_CREATED = (token: string, route: string, reason: string) =>
 // Locates a provider in the constructor's list, for messages.
 function atIndex(index?: number): string {
   return index === undefined ? '' : ` at index ${index}`;
+}
+
+function setName(type: { prototype: Error }, name: string): void {
+  Object.defineProperty(type.prototype, 'name', {
+    value: name,
+    writable: true,
+    configurable: true,
+  });
 }
