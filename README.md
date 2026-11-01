@@ -116,7 +116,9 @@ The examples below use symbols for services, such as `LOGGER` and `CLOCK`, and s
 
 ## Providers
 
-Every provider has a `provide` token and exactly one of the following keys, which says how the service is produced.
+Every provider has a `provide` token and one of the following keys, which says how the service is produced.
+
+Set only one of these keys. If a provider has more than one, Needle uses the first in the order `useValue`, `useClass`, `useFactory`, `useExisting` and ignores the rest. A `useClass`, `useFactory` or `useExisting` set to `undefined` counts as not set, but `useValue: undefined` is a value.
 
 ### Values: `useValue`
 
