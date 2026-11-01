@@ -100,7 +100,7 @@ A common way to set Needle up is to create one container when your application s
 
 ## Tokens
 
-A token is the key a service is registered and requested under. It can be a string or a symbol.
+A token is the key a service is registered and requested under. It can be a string or a symbol. Anything else, including a class, throws `InvalidProviderError` when it is registered.
 
 Symbols are the safest choice: two symbols never collide, even when their descriptions match. Export them from the module that defines the service:
 
@@ -172,6 +172,8 @@ container.get<(name: string) => string>(GREETER)('Ada'); // Hello, Ada!
 ```
 
 Factories are the way to build services that take constructor arguments, choose an implementation at runtime, or need setup before use. A factory that is not a function throws `InvalidFactoryError` when it is registered.
+
+Needle does not await factories. An `async` factory makes `get` return its promise, and a singleton keeps that promise, even if it rejects. A rejection also reaches you as the original error, not as a `ServiceNotCreatedError`.
 
 Inside a provider list, TypeScript infers the factory's parameter type. A factory written as a separate function can type its parameter with `Container` from [`@armscye/container`](https://www.npmjs.com/package/@armscye/container), the package that defines Needle's types. Add it to your own dependencies to import from it:
 
@@ -424,6 +426,8 @@ When a constructor or factory throws, Needle wraps the error once, at the servic
 ServiceNotCreatedError: Service for "Engine" could not be created (Car -> Engine). Reason: no fuel
 ```
 
+A missing dependency counts as a failure too. If a factory asks for a token with no provider, `get` throws `ServiceNotCreatedError` for the service being created, with the `ProviderNotFoundError` as its `cause`. `CircularDependencyError` is not wrapped.
+
 After any error, the container stays usable for other services.
 
 ## Testing
@@ -448,7 +452,7 @@ If the application uses the `error` conflict policy, replacing a provider throws
 Version 2 narrows the container to a small public API and reports problems earlier. Most applications only need the changes in the first three items.
 
 - **ES modules.** Needle is published as an ES module and requires Node.js 22.12 or later. On those versions, CommonJS code can still `require()` it.
-- **`shared` is replaced by `lifetime`.** Replace `shared: true` with `lifetime: 'singleton'` and `shared: false` with `lifetime: 'transient'`, both on providers and in the constructor's options.
+- **`shared` is replaced by `lifetime`.** Replace `shared: true` with `lifetime: 'singleton'` and `shared: false` with `lifetime: 'transient'`, both on providers and in the constructor's options. Needle ignores `shared` without warning, so a leftover `shared: false` gives you a singleton.
 - **The public API is the constructor, `get`, `has` and `addProvider`.** `initialize()` is removed: pass providers to the constructor or call `addProvider`. `isInitialized`, `options`, the internal maps (`services`, `records`, `aliases`) and helper methods such as `isValueProvider` are no longer accessible.
 - **Aliases follow their target's lifetime.** `useExisting` providers no longer accept `lifetime` or `shared`; an alias returns whatever its target returns.
 - **The last registration for a token wins.** Registering a token again replaces its previous provider, including any instance already created for it. Use the [conflict policy](#conflict-policy) to make duplicates an error or to keep the first registration instead.
