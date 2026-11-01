@@ -70,21 +70,29 @@ describe('stringify', () => {
     expect(stringify([{ provide: 'a' }, 'b'])).toBe('[{"provide":"a"}, b]');
   });
 
-  it('should serialize repeated objects that are not circular', () => {
+  it('should mark repeated objects that are not circular', () => {
     const shared = { k: 1 };
     expect(stringify({ a: shared, b: shared })).toBe(
-      '{"a":{"k":1},"b":{"k":1}}',
+      '{"a":{"k":1},"b":"[Repeated]"}',
     );
     expect(stringify({ list: [shared, shared] })).toBe(
-      '{"list":[{"k":1},{"k":1}]}',
+      '{"list":[{"k":1},"[Repeated]"]}',
     );
+  });
+
+  it('should keep output linear when objects share deep references', () => {
+    let value: object = { k: 1 };
+    for (let level = 0; level < 64; level++) {
+      value = { a: value, b: value };
+    }
+    expect(stringify(value).length).toBeLessThan(2000);
   });
 
   it('should mark only the reference that closes a cycle', () => {
     const parent: any = { name: 'parent', child: { name: 'child' } };
     parent.child.parent = parent;
     expect(stringify({ first: parent, second: parent })).toBe(
-      '{"first":{"name":"parent","child":{"name":"child","parent":"[Circular]"}},"second":{"name":"parent","child":{"name":"child","parent":"[Circular]"}}}',
+      '{"first":{"name":"parent","child":{"name":"child","parent":"[Circular]"}},"second":"[Repeated]"}',
     );
   });
 
