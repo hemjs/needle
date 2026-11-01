@@ -216,6 +216,40 @@ test('Needle throws for conflicting aliases to non-existent providers', () => {
   );
 });
 
+test.each([
+  [{ useValue: 1 }, '{"useValue":1}'],
+  [{ provide: undefined, useValue: 1 }, '{"useValue":1}'],
+  [{ provide: null, useValue: 1 }, '{"provide":null,"useValue":1}'],
+  [{ provide: 123, useValue: 1 }, '{"provide":123,"useValue":1}'],
+  [{ provide: {}, useValue: 1 }, '{"provide":{},"useValue":1}'],
+  [
+    { provide: Engine, useClass: Engine },
+    '{"provide":"Engine","useClass":"Engine"}',
+  ],
+])('Needle throws for the invalid token in %j', (provider, detail) => {
+  const message = `Invalid provider definition detected; only instances of Provider are allowed, got: [${detail}]`;
+
+  expect(() => new Needle([<any>provider])).toThrow(`${message} at index 0.`);
+  expect(() => new Needle().addProvider(<any>provider)).toThrow(`${message}.`);
+});
+
+test('Needle reports an invalid token before the rest of the provider', () => {
+  expect(() => new Needle([<any>{ useFactory: 'abc' }])).toThrow(
+    'Invalid provider definition detected',
+  );
+});
+
+test('Needle supports the empty string and symbols as tokens', () => {
+  const token = Symbol('token');
+  const needle = new Needle([
+    { provide: '', useValue: 'empty' },
+    { provide: token, useValue: 'symbol' },
+  ]);
+
+  expect(needle.get('')).toBe('empty');
+  expect(needle.get(token)).toBe('symbol');
+});
+
 test('Needle throws for aliases with undefined token', () => {
   expect(
     () => new Needle([{ provide: Engine.name, useExisting: undefined as any }]),
