@@ -78,6 +78,28 @@ describe('stringify', () => {
     );
   });
 
+  it('should not throw for values that cannot be serialized', () => {
+    const getter = {
+      get boom() {
+        throw new Error('getter');
+      },
+    };
+    const toJSON = {
+      toJSON() {
+        throw new Error('toJSON');
+      },
+    };
+    const { proxy, revoke } = Proxy.revocable({}, {});
+    revoke();
+    const array: unknown[] = [];
+    array.push(array);
+
+    expect(stringify(getter)).toBe('[unserializable]');
+    expect(stringify(toJSON)).toBe('[unserializable]');
+    expect(stringify(proxy)).toBe('[unserializable]');
+    expect(stringify(array)).toBe('[unserializable]');
+  });
+
   it('should stringify bigints', () => {
     expect(stringify(10n)).toBe('10');
   });

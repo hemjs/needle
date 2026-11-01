@@ -400,19 +400,19 @@ try {
 }
 ```
 
-To handle every container error in one place, check for `NeedleError` instead.
+To handle every container error in one place, check for `NeedleError` instead. A class that extends one of these errors inherits its `name` unless it sets its own.
 
-| Error                     | Thrown when                                                                    |
-| ------------------------- | ------------------------------------------------------------------------------ |
-| `InvalidProviderError`    | A provider has no valid `useValue`, `useClass`, `useFactory` or `useExisting`. |
-| `InvalidClassError`       | `useClass` is not something that can be called with `new`.                     |
-| `InvalidConstructorError` | `useClass` has a constructor with required parameters.                         |
-| `InvalidFactoryError`     | `useFactory` is not a function.                                                |
-| `ProviderConflictError`   | A token is registered twice under the `error` conflict policy.                 |
-| `CircularAliasError`      | Aliases form a loop.                                                           |
-| `ProviderNotFoundError`   | `get` is called for a token with no provider.                                  |
-| `CircularDependencyError` | Services depend on each other while being created.                             |
-| `ServiceNotCreatedError`  | A constructor or factory throws while creating a service.                      |
+| Error                     | Thrown when                                                                                                                 |
+| ------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `InvalidProviderError`    | A provider's `provide` is not a string or symbol, or it has no valid `useValue`, `useClass`, `useFactory` or `useExisting`. |
+| `InvalidClassError`       | `useClass` is not something that can be called with `new`.                                                                  |
+| `InvalidConstructorError` | `useClass` has a constructor with required parameters.                                                                      |
+| `InvalidFactoryError`     | `useFactory` is not a function.                                                                                             |
+| `ProviderConflictError`   | A token is registered twice under the `error` conflict policy.                                                              |
+| `CircularAliasError`      | Aliases form a loop.                                                                                                        |
+| `ProviderNotFoundError`   | `get` is called for a token with no provider.                                                                               |
+| `CircularDependencyError` | Services depend on each other while being created.                                                                          |
+| `ServiceNotCreatedError`  | A constructor or factory throws while creating a service.                                                                   |
 
 The first six are thrown when a provider is registered, so most configuration mistakes surface as soon as the container is created. The last three are thrown by `get`.
 
@@ -450,9 +450,9 @@ Version 2 narrows the container to a small public API and reports problems earli
 - **The public API is the constructor, `get`, `has` and `addProvider`.** `initialize()` is removed: pass providers to the constructor or call `addProvider`. `isInitialized`, `options`, the internal maps (`services`, `records`, `aliases`) and helper methods such as `isValueProvider` are no longer accessible.
 - **Aliases follow their target's lifetime.** `useExisting` providers no longer accept `lifetime` or `shared`; an alias returns whatever its target returns.
 - **The last registration for a token wins.** Registering a token again replaces its previous provider, including any instance already created for it. Use the [conflict policy](#conflict-policy) to make duplicates an error or to keep the first registration instead.
-- **Problems are reported earlier.** Factories that are not functions and `useClass` values that cannot be constructed now fail when they are registered rather than on `get`. Circular dependencies throw `CircularDependencyError` instead of overflowing the stack.
-- **Errors are exported.** All error classes can be imported and checked with `instanceof`, and several messages are clearer. Code that matched error message text may need updating.
-- **Types.** Needle now uses `@armscye/container` 0.8, whose provider types no longer include `shared`.
+- **Problems are reported earlier.** Factories that are not functions and `useClass` values that cannot be constructed now fail when they are registered rather than on `get`. A `provide` that is not a string or symbol is rejected when it is registered. Circular dependencies throw `CircularDependencyError` instead of overflowing the stack.
+- **Errors are exported.** All error classes can be imported and checked with `instanceof`, each has its own `name` instead of `Error`, and several messages are clearer. Code that matched error message text may need updating.
+- **Types.** Needle now uses `@armscye/container` 0.9, whose provider types no longer include `shared`.
 
 ## License
 

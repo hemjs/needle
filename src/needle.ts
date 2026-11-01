@@ -120,6 +120,9 @@ export class Needle implements Container {
   }
 
   #toRecord(provider: Provider, index?: number): ProviderRecord {
+    if (!isToken(provider?.provide)) {
+      throw new InvalidProviderError(provider, index);
+    }
     if (isValueProvider(provider)) {
       return { kind: 'value', value: provider.useValue };
     }
@@ -140,7 +143,7 @@ export class Needle implements Container {
         lifetime: provider.lifetime ?? this.#options.lifetime ?? 'singleton',
       };
     }
-    if (isExistingProvider(provider)) {
+    if (isExistingProvider(provider) && isToken(provider.useExisting)) {
       return { kind: 'alias', target: provider.useExisting };
     }
     throw new InvalidProviderError(provider, index);
@@ -211,21 +214,23 @@ export class Needle implements Container {
 }
 
 function isValueProvider(provider: Provider): provider is ValueProvider {
-  return (
-    typeof provider === 'object' && provider !== null && 'useValue' in provider
-  );
+  return 'useValue' in provider;
 }
 
 function isClassProvider(provider: Provider): provider is ClassProvider {
-  return !!(provider && (provider as ClassProvider).useClass);
+  return (provider as ClassProvider).useClass !== undefined;
 }
 
 function isFactoryProvider(provider: Provider): provider is FactoryProvider {
-  return !!(provider && (provider as FactoryProvider).useFactory);
+  return (provider as FactoryProvider).useFactory !== undefined;
 }
 
 function isExistingProvider(provider: Provider): provider is ExistingProvider {
-  return !!(provider && (provider as ExistingProvider).useExisting);
+  return (provider as ExistingProvider)?.useExisting !== undefined;
+}
+
+function isToken(value: unknown): value is ProviderToken {
+  return typeof value === 'string' || typeof value === 'symbol';
 }
 
 function classToFactory(type: NoArgument<any>): Factory {

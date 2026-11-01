@@ -1,4 +1,13 @@
+// Builds error messages, so it must not throw and hide the error being reported.
 export function stringify(value: unknown): string {
+  try {
+    return format(value);
+  } catch {
+    return '[unserializable]';
+  }
+}
+
+function format(value: unknown): string {
   if (typeof value === 'string') {
     return value;
   }
@@ -6,7 +15,7 @@ export function stringify(value: unknown): string {
     return value.name || '(anonymous)';
   }
   if (Array.isArray(value)) {
-    return `[${value.map(stringify).join(', ')}]`;
+    return `[${value.map((item) => format(item)).join(', ')}]`;
   }
   if (typeof value === 'object' && value !== null) {
     return serialize(value);
@@ -22,7 +31,7 @@ function serialize(value: object): string {
       typeof item === 'function' ||
       typeof item === 'bigint'
     ) {
-      return stringify(item);
+      return format(item);
     }
     if (typeof item === 'object' && item !== null) {
       if (seen.has(item)) {
