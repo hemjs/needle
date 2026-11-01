@@ -452,7 +452,7 @@ Version 2 narrows the container to a small public API and reports problems earli
 - **The last registration for a token wins.** Registering a token again replaces its previous provider, including any instance already created for it. Use the [conflict policy](#conflict-policy) to make duplicates an error or to keep the first registration instead.
 - **Problems are reported earlier.** Factories that are not functions and `useClass` values that cannot be constructed now fail when they are registered rather than on `get`. A `provide` that is not a string or symbol is rejected when it is registered. Circular dependencies throw `CircularDependencyError` instead of overflowing the stack.
 - **Errors are exported.** All error classes can be imported and checked with `instanceof`, and several messages are clearer. Code that matched error message text may need updating.
-- **Types.** Needle now uses `@armscye/container` 0.8, whose provider types no longer include `shared`.
+- **Types.** Needle now uses `@armscye/container` 0.9, whose provider types no longer include `shared`.
 
 ## License
 
