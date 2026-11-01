@@ -313,6 +313,46 @@ test.each([null, 0, '', false])(
   },
 );
 
+test('Needle applies the first use key in documented order', () => {
+  class Service {}
+  const factory = () => 'factory';
+
+  expect(
+    new Needle([
+      {
+        provide: 'a',
+        useValue: 'value',
+        useClass: Service,
+        useFactory: factory,
+        useExisting: 'b',
+      } as any,
+    ]).get('a'),
+  ).toBe('value');
+  expect(
+    new Needle([
+      {
+        provide: 'a',
+        useClass: Service,
+        useFactory: factory,
+        useExisting: 'b',
+      } as any,
+    ]).get('a'),
+  ).toBeInstanceOf(Service);
+  expect(
+    new Needle([
+      { provide: 'a', useFactory: factory, useExisting: 'b' } as any,
+    ]).get('a'),
+  ).toBe('factory');
+});
+
+test('Needle treats useValue undefined as a value', () => {
+  const needle = new Needle([
+    { provide: 'a', useValue: undefined, useFactory: () => 'made' },
+  ]);
+
+  expect(needle.get('a')).toBeUndefined();
+});
+
 test('Needle ignores use keys set to undefined', () => {
   const needle = new Needle([
     { provide: 'a', useClass: <any>undefined, useFactory: () => 'made' },

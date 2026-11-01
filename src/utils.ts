@@ -24,8 +24,9 @@ function format(value: unknown): string {
 }
 
 function serialize(value: object): string {
-  const seen = new WeakSet<object>();
-  return JSON.stringify(value, (_key, item: unknown) => {
+  // The objects currently being serialized, from the root down to the holder.
+  const ancestors: unknown[] = [];
+  return JSON.stringify(value, function (this: unknown, _key, item: unknown) {
     if (
       typeof item === 'symbol' ||
       typeof item === 'function' ||
@@ -34,10 +35,13 @@ function serialize(value: object): string {
       return format(item);
     }
     if (typeof item === 'object' && item !== null) {
-      if (seen.has(item)) {
+      while (ancestors.length > 0 && ancestors.at(-1) !== this) {
+        ancestors.pop();
+      }
+      if (ancestors.includes(item)) {
         return '[Circular]';
       }
-      seen.add(item);
+      ancestors.push(item);
     }
     return item;
   });
