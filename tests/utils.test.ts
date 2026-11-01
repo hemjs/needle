@@ -70,6 +70,24 @@ describe('stringify', () => {
     expect(stringify([{ provide: 'a' }, 'b'])).toBe('[{"provide":"a"}, b]');
   });
 
+  it('should serialize repeated objects that are not circular', () => {
+    const shared = { k: 1 };
+    expect(stringify({ a: shared, b: shared })).toBe(
+      '{"a":{"k":1},"b":{"k":1}}',
+    );
+    expect(stringify({ list: [shared, shared] })).toBe(
+      '{"list":[{"k":1},{"k":1}]}',
+    );
+  });
+
+  it('should mark only the reference that closes a cycle', () => {
+    const parent: any = { name: 'parent', child: { name: 'child' } };
+    parent.child.parent = parent;
+    expect(stringify({ first: parent, second: parent })).toBe(
+      '{"first":{"name":"parent","child":{"name":"child","parent":"[Circular]"}},"second":{"name":"parent","child":{"name":"child","parent":"[Circular]"}}}',
+    );
+  });
+
   it('should keep values that JSON drops or rejects', () => {
     const value: any = { token: Symbol('db'), factory: foo, size: 10n };
     value.self = value;
