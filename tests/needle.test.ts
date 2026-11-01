@@ -250,6 +250,19 @@ test('Needle supports the empty string and symbols as tokens', () => {
   expect(needle.get(token)).toBe('symbol');
 });
 
+test('Needle reports invalid providers that cannot be serialized', () => {
+  const provider = {
+    provide: 'a',
+    get boom() {
+      throw new Error('getter');
+    },
+  };
+
+  expect(() => new Needle([provider as any])).toThrow(
+    'Invalid provider definition detected; only instances of Provider are allowed, got: [[unserializable]] at index 0.',
+  );
+});
+
 test('Needle throws for aliases with undefined token', () => {
   expect(
     () => new Needle([{ provide: Engine.name, useExisting: undefined as any }]),
