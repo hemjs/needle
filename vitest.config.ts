@@ -7,6 +7,7 @@ export default defineConfig({
       provider: 'v8',
       include: ['src/**/*.ts'],
       reportsDirectory: './coverage',
+      thresholds: { 100: true },
     },
   },
 });
