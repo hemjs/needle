@@ -9,7 +9,7 @@ import type {
   ProviderToken,
   ValueProvider,
 } from '@armscye/container';
-import type { NoArgument, Type } from '@armscye/core';
+import type { NoArgument } from '@armscye/core';
 
 import {
   CircularAliasError,
@@ -233,16 +233,16 @@ function isToken(value: unknown): value is ProviderToken {
   return typeof value === 'string' || typeof value === 'symbol';
 }
 
-function classToFactory(type: NoArgument<any>): Factory {
+function classToFactory(type: NoArgument): Factory {
   if (!isInstantiable(type)) {
     throw new InvalidClassError(type);
   }
   if (type.length > 0) {
     throw new InvalidConstructorError(type);
   }
-  return () => new (type as Type<any>)();
+  return () => new type();
 }
 
-function isInstantiable(type: Type<any>): boolean {
+function isInstantiable(type: NoArgument): boolean {
   return typeof type === 'function' && typeof type.prototype !== 'undefined';
 }
