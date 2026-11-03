@@ -60,6 +60,20 @@ describe('NeedleError', () => {
   });
 });
 
+describe('InvalidOptionError', () => {
+  it('should list the allowed values', () => {
+    expect(new InvalidOptionError('a', 'b', ['c', 'd']).message).toBe(
+      'Invalid a "b"; expected one of "c", "d".',
+    );
+  });
+
+  it('should name a single allowed value without "one of"', () => {
+    expect(new InvalidOptionError('a', 'b', ['c'], 2).message).toBe(
+      'Invalid a "b"; expected "c" at index 2.',
+    );
+  });
+});
+
 describe('ServiceNotCreatedError', () => {
   const reasonOf = (cause: unknown) =>
     new ServiceNotCreatedError(['a'], cause).message.split('Reason: ')[1];

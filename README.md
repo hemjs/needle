@@ -408,18 +408,18 @@ try {
 
 To handle every container error in one place, check for `NeedleError` instead. A class that extends one of these errors inherits its `name` unless it sets its own.
 
-| Error                     | Thrown when                                                                                                                 |
-| ------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| `InvalidProviderError`    | A provider's `provide` is not a string or symbol, or it has no valid `useValue`, `useClass`, `useFactory` or `useExisting`. |
-| `InvalidClassError`       | `useClass` is not something that can be called with `new`.                                                                  |
-| `InvalidConstructorError` | `useClass` has a constructor with required parameters.                                                                      |
-| `InvalidFactoryError`     | `useFactory` is not a function.                                                                                             |
-| `InvalidOptionError`      | A `lifetime` or `conflictPolicy` value is not one of the allowed values.                                                    |
-| `ProviderConflictError`   | A token is registered twice under the `error` conflict policy.                                                              |
-| `CircularAliasError`      | Aliases form a loop.                                                                                                        |
-| `ProviderNotFoundError`   | `get` is called for a token with no provider.                                                                               |
-| `CircularDependencyError` | Services depend on each other while being created.                                                                          |
-| `ServiceNotCreatedError`  | A constructor or factory throws while creating a service.                                                                   |
+| Error                     | Thrown when                                                                                                                                                            |
+| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `InvalidProviderError`    | The provider list is not an array, a provider's `provide` is not a string or symbol, or a provider has no valid `useValue`, `useClass`, `useFactory` or `useExisting`. |
+| `InvalidClassError`       | `useClass` is not something that can be called with `new`.                                                                                                             |
+| `InvalidConstructorError` | `useClass` has a constructor with required parameters.                                                                                                                 |
+| `InvalidFactoryError`     | `useFactory` is not a function.                                                                                                                                        |
+| `InvalidOptionError`      | The options are not an object, or a `lifetime` or `conflictPolicy` value is not one of the allowed values.                                                             |
+| `ProviderConflictError`   | A token is registered twice under the `error` conflict policy.                                                                                                         |
+| `CircularAliasError`      | Aliases form a loop.                                                                                                                                                   |
+| `ProviderNotFoundError`   | `get` is called for a token with no provider.                                                                                                                          |
+| `CircularDependencyError` | Services depend on each other while being created.                                                                                                                     |
+| `ServiceNotCreatedError`  | A constructor or factory throws while creating a service.                                                                                                              |
 
 The first seven are thrown when the container is created or a provider is registered, so most configuration mistakes surface as soon as the container is created. The last three are thrown by `get`.
 

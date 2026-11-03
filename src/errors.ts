@@ -138,8 +138,11 @@ const INVALID_OPTION = (
   value: string,
   expected: readonly string[],
   location: string,
-) =>
-  `Invalid ${option} "${value}"; expected one of ${expected.map((item) => `"${item}"`).join(', ')}${location}.`;
+) => {
+  const list = expected.map((item) => `"${item}"`).join(', ');
+  const allowed = expected.length > 1 ? `one of ${list}` : list;
+  return `Invalid ${option} "${value}"; expected ${allowed}${location}.`;
+};
 
 const PROVIDER_NOT_FOUND = (token: string) =>
   `No provider for "${token}" was found; are you certain you provided it during configuration?`;

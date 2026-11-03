@@ -57,10 +57,16 @@ export class Needle implements Container {
   readonly #options: NeedleOptions;
 
   constructor(providers: Provider[] = [], options: NeedleOptions = {}) {
+    if (typeof options !== 'object' || options === null) {
+      throw new InvalidOptionError('options', options, ['object']);
+    }
     checkOption('lifetime', options.lifetime, LIFETIMES);
     checkOption('conflictPolicy', options.conflictPolicy, CONFLICT_POLICIES);
     this.#options = options;
 
+    if (!Array.isArray(providers)) {
+      throw new InvalidProviderError(providers);
+    }
     for (const [index, provider] of providers.entries()) {
       this.#register(provider, index);
     }
