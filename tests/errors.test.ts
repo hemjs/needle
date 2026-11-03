@@ -96,6 +96,17 @@ describe('ServiceNotCreatedError', () => {
       'connection refused',
     ],
     ['a non-string message', { message: 42 }, '42'],
+    ['an Error with an empty message', new Error(''), 'Error'],
+    [
+      'a named error with an empty message',
+      Object.assign(new Error(''), { name: 'TimeoutError' }),
+      'TimeoutError',
+    ],
+    [
+      'an error-like object with an empty message',
+      { message: '' },
+      '{"message":""}',
+    ],
     ['a string', 'boom', 'boom'],
     ['a symbol', Symbol('boom'), 'Symbol(boom)'],
     ['undefined', undefined, 'undefined'],

@@ -60,9 +60,13 @@ export class Needle implements Container {
     if (typeof options !== 'object' || options === null) {
       throw new InvalidOptionError('options', options, ['object']);
     }
-    checkOption('lifetime', options.lifetime, LIFETIMES);
-    checkOption('conflictPolicy', options.conflictPolicy, CONFLICT_POLICIES);
-    this.#options = options;
+    this.#options = { ...options };
+    checkOption('lifetime', this.#options.lifetime, LIFETIMES);
+    checkOption(
+      'conflictPolicy',
+      this.#options.conflictPolicy,
+      CONFLICT_POLICIES,
+    );
 
     if (!Array.isArray(providers)) {
       throw new InvalidProviderError(providers);
@@ -145,7 +149,7 @@ export class Needle implements Container {
     if (isClassProvider(provider)) {
       return {
         kind: 'factory',
-        factory: classToFactory(provider.useClass),
+        factory: classToFactory(provider.useClass, index),
         lifetime: this.#lifetime(provider.lifetime, index),
       };
     }
@@ -277,12 +281,12 @@ function isToken(value: unknown): value is ProviderToken {
   return typeof value === 'string' || typeof value === 'symbol';
 }
 
-function classToFactory(type: NoArgument): Factory {
+function classToFactory(type: NoArgument, index?: number): Factory {
   if (!isConstructor(type)) {
-    throw new InvalidClassError(type);
+    throw new InvalidClassError(type, index);
   }
   if (type.length > 0) {
-    throw new InvalidConstructorError(type);
+    throw new InvalidConstructorError(type, index);
   }
   return () => new type();
 }

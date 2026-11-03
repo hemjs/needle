@@ -33,8 +33,8 @@ export class InvalidClassError extends NeedleError {
     setName(this, 'InvalidClassError');
   }
 
-  constructor(value: unknown) {
-    super(INVALID_CLASS(stringify(value)));
+  constructor(value: unknown, index?: number) {
+    super(INVALID_CLASS(stringify(value), atIndex(index)));
   }
 }
 
@@ -43,8 +43,8 @@ export class InvalidConstructorError extends NeedleError {
     setName(this, 'InvalidConstructorError');
   }
 
-  constructor(value: unknown) {
-    super(INVALID_CONSTRUCTOR(stringify(value)));
+  constructor(value: unknown, index?: number) {
+    super(INVALID_CONSTRUCTOR(stringify(value), atIndex(index)));
   }
 }
 
@@ -54,7 +54,8 @@ export class InvalidFactoryError extends NeedleError {
   }
 
   constructor(value: unknown, index?: number) {
-    super(INVALID_FACTORY(typeof value, atIndex(index)));
+    const type = value === null ? 'null' : typeof value;
+    super(INVALID_FACTORY(type, atIndex(index)));
   }
 }
 
@@ -124,11 +125,11 @@ const CIRCULAR_ALIAS = (cycle: string) => `Circular alias detected: ${cycle}`;
 const CIRCULAR_DEPENDENCY = (cycle: string) =>
   `Circular dependency detected: ${cycle}`;
 
-const INVALID_CLASS = (name: string) =>
-  `Unable to instantiate class (${name} is not instantiable).`;
+const INVALID_CLASS = (name: string, location: string) =>
+  `Unable to instantiate class (${name} is not instantiable)${location}.`;
 
-const INVALID_CONSTRUCTOR = (name: string) =>
-  `Invalid class constructor "${name}"; expected a default (no-argument) constructor.`;
+const INVALID_CONSTRUCTOR = (name: string, location: string) =>
+  `Invalid class constructor "${name}"; expected a default (no-argument) constructor${location}.`;
 
 const INVALID_FACTORY = (type: string, location: string) =>
   `Invalid factory provided; expected a function, but "${type}" was received${location}.`;
@@ -158,11 +159,14 @@ const SERVICE_NOT_CREATED = (token: string, route: string, reason: string) =>
 
 function describe(cause: unknown): string {
   try {
-    if (cause instanceof Error) {
-      return String(cause.message);
-    }
     if (typeof cause === 'object' && cause !== null && 'message' in cause) {
-      return String(cause.message);
+      const message = String(cause.message);
+      if (message) {
+        return message;
+      }
+      if ('name' in cause && typeof cause.name === 'string' && cause.name) {
+        return cause.name;
+      }
     }
   } catch {
     // Fall back to a description that cannot throw.
