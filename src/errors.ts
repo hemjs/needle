@@ -13,8 +13,8 @@ export class CircularAliasError extends NeedleError {
     setName(this, 'CircularAliasError');
   }
 
-  constructor(path: ProviderToken[]) {
-    super(CIRCULAR_ALIAS(path.map(stringify).join(' -> ')));
+  constructor(path: ProviderToken[], index?: number) {
+    super(CIRCULAR_ALIAS(path.map(stringify).join(' -> '), atIndex(index)));
   }
 }
 
@@ -120,7 +120,8 @@ export class ServiceNotCreatedError extends NeedleError {
   }
 }
 
-const CIRCULAR_ALIAS = (cycle: string) => `Circular alias detected: ${cycle}`;
+const CIRCULAR_ALIAS = (cycle: string, location: string) =>
+  `Circular alias detected: ${cycle}${location}`;
 
 const CIRCULAR_DEPENDENCY = (cycle: string) =>
   `Circular dependency detected: ${cycle}`;

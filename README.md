@@ -205,7 +205,7 @@ Aliases are useful for giving a service a second, more specific name, or for kee
 
 An alias has no lifetime of its own. It returns whatever its target returns, so aliasing a singleton gives the same instance and aliasing a transient service gives a new one each time.
 
-Aliases that form a loop, such as `a -> b -> a`, throw `CircularAliasError` when the container is created or, for `addProvider`, when the alias is added.
+Each alias is checked as it is registered, in list order. An alias that would close a loop, such as `a -> b -> a`, throws `CircularAliasError` right away, even if a later provider in the list would have replaced part of the loop.
 
 ## Building a container
 

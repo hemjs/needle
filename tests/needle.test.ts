@@ -833,7 +833,7 @@ test('Needle throws for invalid factories when they are registered', () => {
 test('Needle throws for cyclic aliases', () => {
   expect(
     () => new Needle([{ provide: Engine.name, useExisting: Engine.name }]),
-  ).toThrow('Circular alias detected: Engine -> Engine');
+  ).toThrow('Circular alias detected: Engine -> Engine at index 0');
 });
 
 test('Needle throws for cyclic alias chains', () => {
@@ -844,7 +844,9 @@ test('Needle throws for cyclic alias chains', () => {
         { provide: Engine.name, useExisting: TurboEngine.name },
         { provide: TurboEngine.name, useExisting: Engine.name },
       ]),
-  ).toThrow('Circular alias detected: Engine -> TurboEngine -> Engine');
+  ).toThrow(
+    'Circular alias detected: TurboEngine -> Engine -> TurboEngine at index 2',
+  );
 });
 
 test('Needle throws for cyclic alias chains of three or more aliases', () => {
@@ -855,7 +857,7 @@ test('Needle throws for cyclic alias chains of three or more aliases', () => {
         { provide: 'B', useExisting: 'C' },
         { provide: 'C', useExisting: 'A' },
       ]),
-  ).toThrow('Circular alias detected: A -> B -> C -> A');
+  ).toThrow('Circular alias detected: C -> A -> B -> C at index 2');
 });
 
 test('Needle throws for alias chains that lead into a cycle', () => {
@@ -867,7 +869,7 @@ test('Needle throws for alias chains that lead into a cycle', () => {
         { provide: 'C', useExisting: 'D' },
         { provide: 'D', useExisting: 'B' },
       ]),
-  ).toThrow('Circular alias detected: B -> C -> D -> B');
+  ).toThrow('Circular alias detected: D -> B -> C -> D at index 3');
 });
 
 test('Needle correctly identifies existing providers', () => {
@@ -1066,6 +1068,56 @@ test('Needle throws for cyclic alias chains added one at a time', () => {
   expect(() => needle.addProvider({ provide: 'C', useExisting: 'A' })).toThrow(
     'Circular alias detected: ',
   );
+});
+
+test('Needle checks aliases in list order', () => {
+  expect(
+    () =>
+      new Needle([
+        { provide: 'a', useExisting: 'b' },
+        { provide: 'b', useExisting: 'a' },
+        { provide: 'a', useValue: 1 },
+      ]),
+  ).toThrow('Circular alias detected: b -> a -> b at index 1');
+});
+
+test('Needle allows an alias that replaces part of a chain', () => {
+  const needle = new Needle([
+    { provide: 'a', useExisting: 'b' },
+    { provide: 'b', useExisting: 'c' },
+    { provide: 'c', useValue: 1 },
+    { provide: 'b', useValue: 2 },
+    { provide: 'c', useExisting: 'a' },
+  ]);
+
+  expect(needle.get('c')).toBe(2);
+});
+
+test('Needle skips the loop check for aliases it ignores', () => {
+  const needle = new Needle(
+    [
+      { provide: 'a', useExisting: 'b' },
+      { provide: 'b', useExisting: 'c' },
+      { provide: 'b', useExisting: 'a' },
+    ],
+    { conflictPolicy: 'ignore' },
+  );
+
+  expect(needle.has('a')).toBe(false);
+});
+
+test('Needle reports a conflict before an alias loop', () => {
+  expect(
+    () =>
+      new Needle(
+        [
+          { provide: 'a', useExisting: 'b' },
+          { provide: 'b', useExisting: 'c' },
+          { provide: 'b', useExisting: 'a' },
+        ],
+        { conflictPolicy: 'error' },
+      ),
+  ).toThrow(ProviderConflictError);
 });
 
 test('Needle resolves aliases to aliases added later', () => {

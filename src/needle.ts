@@ -74,12 +74,6 @@ export class Needle implements Container {
     for (const [index, provider] of providers.entries()) {
       this.#register(provider, index);
     }
-
-    for (const provider of providers) {
-      if (isExistingProvider(provider)) {
-        this.#getAlias(provider.provide);
-      }
-    }
   }
 
   get<T>(token: ProviderToken): T {
@@ -101,29 +95,11 @@ export class Needle implements Container {
   }
 
   addProvider(provider: Provider): this {
-    if (!isExistingProvider(provider)) {
-      this.#register(provider);
-      return this;
-    }
-
-    const previous = this.#records.get(provider.provide);
-    if (!this.#register(provider)) {
-      return this;
-    }
-    try {
-      this.#getAlias(provider.provide);
-    } catch (error) {
-      if (previous === undefined) {
-        this.#records.delete(provider.provide);
-      } else {
-        this.#records.set(provider.provide, previous);
-      }
-      throw error;
-    }
+    this.#register(provider);
     return this;
   }
 
-  #register(provider: Provider, index?: number): boolean {
+  #register(provider: Provider, index?: number): void {
     const record = this.#toRecord(provider, index);
 
     if (this.#records.has(provider.provide)) {
@@ -131,12 +107,34 @@ export class Needle implements Container {
         case 'error':
           throw new ProviderConflictError(provider.provide, index);
         case 'ignore':
-          return false;
+          return;
       }
     }
 
+    if (record.kind === 'alias') {
+      this.#checkAlias(provider.provide, record.target, index);
+    }
     this.#records.set(provider.provide, record);
-    return true;
+  }
+
+  #checkAlias(
+    token: ProviderToken,
+    target: ProviderToken,
+    index?: number,
+  ): void {
+    const path = [token];
+    let cursor = target;
+    while (true) {
+      path.push(cursor);
+      if (cursor === token) {
+        throw new CircularAliasError(path, index);
+      }
+      const record = this.#records.get(cursor);
+      if (record?.kind !== 'alias') {
+        return;
+      }
+      cursor = record.target;
+    }
   }
 
   #toRecord(provider: Provider, index?: number): ProviderRecord {
@@ -178,22 +176,9 @@ export class Needle implements Container {
   }
 
   #getAlias(token: ProviderToken): ProviderToken {
-    let record = this.#records.get(token);
-    if (record?.kind !== 'alias') {
-      return token;
-    }
-
-    const seen = new Set<ProviderToken>();
     let cursor = token;
+    let record = this.#records.get(cursor);
     while (record?.kind === 'alias') {
-      if (seen.has(cursor)) {
-        const path = [...seen];
-        throw new CircularAliasError([
-          ...path.slice(path.indexOf(cursor)),
-          cursor,
-        ]);
-      }
-      seen.add(cursor);
       cursor = record.target;
       record = this.#records.get(cursor);
     }
@@ -262,7 +247,7 @@ function isFactoryProvider(provider: Provider): provider is FactoryProvider {
 }
 
 function isExistingProvider(provider: Provider): provider is ExistingProvider {
-  return (provider as ExistingProvider)?.useExisting !== undefined;
+  return (provider as ExistingProvider).useExisting !== undefined;
 }
 
 function checkOption<T extends string>(
