@@ -5,6 +5,7 @@ import {
   CircularDependencyError,
   InvalidConstructorError,
   InvalidOptionError,
+  InvalidProviderError,
   Needle,
   NeedleError,
   ProviderNotFoundError,
@@ -516,6 +517,36 @@ test('Needle checks the parameters of a bound class', () => {
       { provide: 'a', useClass: Service.bind(null, 'dependency') },
     ]).get('a'),
   ).toBeInstanceOf(Service);
+});
+
+test.each([
+  [null, 'null'],
+  [{}, '{}'],
+  ['abc', 'abc'],
+  [new Set([{ provide: 'a', useValue: 1 }]), '{}'],
+])('Needle rejects %j as the provider list', (providers, detail) => {
+  expect(() => new Needle(<any>providers)).toThrow(InvalidProviderError);
+  expect(() => new Needle(<any>providers)).toThrow(
+    `Invalid provider definition detected; only instances of Provider are allowed, got: [${detail}].`,
+  );
+});
+
+test.each([
+  [null, 'null'],
+  ['abc', 'abc'],
+  [5, '5'],
+])('Needle rejects %j as the options', (options, detail) => {
+  expect(() => new Needle([], <any>options)).toThrow(
+    `Invalid options "${detail}"; expected "object".`,
+  );
+});
+
+test('Needle checks the options before the provider list', () => {
+  expect(() => new Needle(<any>null, <any>null)).toThrow(InvalidOptionError);
+});
+
+test('Needle accepts undefined for both arguments', () => {
+  expect(new Needle(undefined, undefined).has('a')).toBe(false);
 });
 
 test('Needle ignores use keys set to undefined', () => {
