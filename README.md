@@ -152,6 +152,8 @@ Needle does not pass arguments to the constructor, so the class must be construc
 
 Needle checks the class when it is registered: a value that cannot be called with `new` throws `InvalidClassError`, and a constructor with required parameters throws `InvalidConstructorError`.
 
+The parameter check uses the constructor's declared parameter count, so it has two limits. A subclass that inherits its constructor reports no parameters, so if its parent needs arguments, the class is only caught by `get`. And an optional TypeScript parameter, `prefix?: string`, still counts, so give it a default value instead: `prefix = ''`.
+
 ### Factories: `useFactory`
 
 Creates the service by calling a function. The function receives the container, so it can request the services it depends on:
