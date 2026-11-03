@@ -114,7 +114,7 @@ export class ServiceNotCreatedError extends NeedleError {
     const token = stringify(path[path.length - 1]);
     const route =
       path.length > 1 ? ` (${path.map(stringify).join(' -> ')})` : '';
-    const reason = cause instanceof Error ? cause.message : String(cause);
+    const reason = describe(cause);
     super(SERVICE_NOT_CREATED(token, route, reason), { cause });
   }
 }
@@ -153,7 +153,20 @@ const INVALID_PROVIDER = (detail: string, location: string) =>
 const SERVICE_NOT_CREATED = (token: string, route: string, reason: string) =>
   `Service for "${token}" could not be created${route}. Reason: ${reason}`;
 
-// Locates a provider in the constructor's list, for messages.
+function describe(cause: unknown): string {
+  try {
+    if (cause instanceof Error) {
+      return String(cause.message);
+    }
+    if (typeof cause === 'object' && cause !== null && 'message' in cause) {
+      return String(cause.message);
+    }
+  } catch {
+    // Fall back to a description that cannot throw.
+  }
+  return stringify(cause);
+}
+
 function atIndex(index?: number): string {
   return index === undefined ? '' : ` at index ${index}`;
 }

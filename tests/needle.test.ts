@@ -433,6 +433,51 @@ test('Needle still ignores lifetime on value and alias providers', () => {
   expect(needle.get('b')).toBe(1);
 });
 
+test('Needle blames the failing service whatever it throws', () => {
+  const thrown = Object.assign(Object.create(null), { code: 'ECONNREFUSED' });
+  const needle = new Needle([
+    {
+      provide: 'db',
+      useFactory: () => {
+        throw thrown;
+      },
+    },
+    { provide: 'app', useFactory: (c) => c.get('db') },
+  ]);
+
+  let error: unknown;
+  try {
+    needle.get('app');
+  } catch (caught) {
+    error = caught;
+  }
+
+  expect(error).toBeInstanceOf(ServiceNotCreatedError);
+  expect((error as Error).message).toBe(
+    'Service for "db" could not be created (app -> db). Reason: {"code":"ECONNREFUSED"}',
+  );
+  expect((error as Error).cause).toBe(thrown);
+});
+
+test('Needle wraps a thrown revoked proxy once, at the failing service', () => {
+  const { proxy, revoke } = Proxy.revocable({}, {});
+  revoke();
+  const thrown: unknown = proxy;
+  const needle = new Needle([
+    {
+      provide: 'db',
+      useFactory: () => {
+        throw thrown;
+      },
+    },
+    { provide: 'app', useFactory: (c) => c.get('db') },
+  ]);
+
+  expect(() => needle.get('app')).toThrow(
+    'Service for "db" could not be created (app -> db). Reason: [unserializable]',
+  );
+});
+
 test('Needle ignores use keys set to undefined', () => {
   const needle = new Needle([
     { provide: 'a', useClass: <any>undefined, useFactory: () => 'made' },

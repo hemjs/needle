@@ -220,14 +220,22 @@ export class Needle implements Container {
     try {
       return factory(this);
     } catch (error) {
-      if (
-        error instanceof CircularDependencyError ||
-        error instanceof ServiceNotCreatedError
-      ) {
+      if (isReported(error)) {
         throw error;
       }
       throw new ServiceNotCreatedError([...this.#path], error);
     }
+  }
+}
+
+function isReported(error: unknown): boolean {
+  try {
+    return (
+      error instanceof CircularDependencyError ||
+      error instanceof ServiceNotCreatedError
+    );
+  } catch {
+    return false;
   }
 }
 
