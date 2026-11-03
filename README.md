@@ -347,7 +347,7 @@ const container = new Needle(
 
 Value providers always return the value they were given, and aliases follow the lifetime of their target.
 
-Any other `lifetime`, on a provider or in the options, throws `InvalidOptionError` when it is registered. Value and alias providers ignore `lifetime`.
+Any other `lifetime` throws `InvalidOptionError`: on a provider when it is registered, in the options when the container is created. Value and alias providers ignore `lifetime`.
 
 ## Conflict policy
 
@@ -433,6 +433,8 @@ ServiceNotCreatedError: Service for "Engine" could not be created (Car -> Engine
 
 A missing dependency counts as a failure too. If a factory asks for a token with no provider, `get` throws `ServiceNotCreatedError` for the service being created, with the `ProviderNotFoundError` as its `cause`. `CircularDependencyError` is not wrapped.
 
+Values in messages are printed as JSON. A repeated object shows `[Repeated]`, a loop `[Circular]`, and a value that cannot be read `[unserializable]`.
+
 After any error, the container stays usable for other services.
 
 ## Testing
@@ -461,7 +463,7 @@ Version 2 narrows the container to a small public API and reports problems earli
 - **The public API is the constructor, `get`, `has` and `addProvider`.** `initialize()` is removed: pass providers to the constructor or call `addProvider`. `isInitialized`, `options`, the internal maps (`services`, `records`, `aliases`) and helper methods such as `isValueProvider` are no longer accessible.
 - **Aliases follow their target's lifetime.** `useExisting` providers no longer accept `lifetime` or `shared`; an alias returns whatever its target returns.
 - **The last registration for a token wins.** Registering a token again replaces its previous provider, including any instance already created for it. Use the [conflict policy](#conflict-policy) to make duplicates an error or to keep the first registration instead.
-- **Problems are reported earlier.** Factories that are not functions and `useClass` values that cannot be constructed now fail when they are registered rather than on `get`. A `provide` that is not a string or symbol is rejected when it is registered. Circular dependencies throw `CircularDependencyError` instead of overflowing the stack.
+- **Problems are reported earlier.** Factories that are not functions and `useClass` values that cannot be constructed now fail when they are registered rather than on `get`. A `provide` that is not a string or symbol is rejected when it is registered, and so is a `lifetime` other than `'singleton'` or `'transient'`, which 1.x silently treated as transient. Circular dependencies throw `CircularDependencyError` instead of overflowing the stack.
 - **Errors are exported.** All error classes can be imported and checked with `instanceof`, each has its own `name` instead of `Error`, and several messages are clearer. Code that matched error message text may need updating.
 - **Types.** Needle now uses `@armscye/container` 0.9, whose provider types no longer include `shared`.
 
