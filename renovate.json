@@ -24,6 +24,11 @@
       "rangeStrategy": "pin"
     },
     {
+      "description": "Runtime dependency updates reach consumers, so they belong in the changelog and trigger a release.",
+      "matchDepTypes": ["dependencies", "peerDependencies"],
+      "semanticCommitType": "fix"
+    },
+    {
       "description": "Keep published ranges, but raise their floor on update.",
       "matchDepTypes": ["dependencies", "peerDependencies"],
       "rangeStrategy": "bump"
