@@ -42,7 +42,7 @@ describe('stringify', () => {
   });
 
   it('should stringify arrays correctly', () => {
-    expect(stringify([123, 456])).toBe('[123, 456]');
+    expect(stringify([123, 456])).toBe('[123,456]');
   });
 
   it('should not crash on objects without a prototype', () => {
@@ -67,7 +67,7 @@ describe('stringify', () => {
   });
 
   it('should serialize objects inside arrays', () => {
-    expect(stringify([{ provide: 'a' }, 'b'])).toBe('[{"provide":"a"}, b]');
+    expect(stringify([{ provide: 'a' }, 'b'])).toBe('[{"provide":"a"},"b"]');
   });
 
   it('should mark repeated objects that are not circular', () => {
@@ -117,13 +117,29 @@ describe('stringify', () => {
     };
     const { proxy, revoke } = Proxy.revocable({}, {});
     revoke();
-    const array: unknown[] = [];
-    array.push(array);
 
     expect(stringify(getter)).toBe('[unserializable]');
     expect(stringify(toJSON)).toBe('[unserializable]');
     expect(stringify(proxy)).toBe('[unserializable]');
-    expect(stringify(array)).toBe('[unserializable]');
+  });
+
+  it('should mark arrays that contain themselves', () => {
+    const array: unknown[] = ['x'];
+    array.push(array);
+    expect(stringify(array)).toBe('["x","[Circular]"]');
+  });
+
+  it('should mark repeats across array items', () => {
+    const shared = { k: 1 };
+    expect(stringify([shared, shared])).toBe('[{"k":1},"[Repeated]"]');
+  });
+
+  it('should keep output linear when arrays share deep references', () => {
+    let value: unknown[] = [1];
+    for (let level = 0; level < 64; level++) {
+      value = [value, value];
+    }
+    expect(stringify(value).length).toBeLessThan(2000);
   });
 
   it('should stringify bigints', () => {
