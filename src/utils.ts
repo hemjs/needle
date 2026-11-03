@@ -14,9 +14,6 @@ function format(value: unknown): string {
   if (typeof value === 'function') {
     return value.name || '(anonymous)';
   }
-  if (Array.isArray(value)) {
-    return `[${value.map((item) => format(item)).join(', ')}]`;
-  }
   if (typeof value === 'object' && value !== null) {
     return serialize(value);
   }

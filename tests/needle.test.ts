@@ -1300,6 +1300,6 @@ test('Needle reports nested provider arrays as invalid providers', () => {
         ],
       ]),
   ).toThrow(
-    'got: [[{"provide":"a","useValue":1}, {"provide":"b","useValue":2}]] at index 0.',
+    'got: [[{"provide":"a","useValue":1},{"provide":"b","useValue":2}]] at index 0.',
   );
 });
