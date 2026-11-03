@@ -272,7 +272,7 @@ function isToken(value: unknown): value is ProviderToken {
 }
 
 function classToFactory(type: NoArgument): Factory {
-  if (!isInstantiable(type)) {
+  if (!isConstructor(type)) {
     throw new InvalidClassError(type);
   }
   if (type.length > 0) {
@@ -281,6 +281,11 @@ function classToFactory(type: NoArgument): Factory {
   return () => new type();
 }
 
-function isInstantiable(type: NoArgument): boolean {
-  return typeof type === 'function' && typeof type.prototype !== 'undefined';
+function isConstructor(type: NoArgument): boolean {
+  try {
+    Reflect.construct(String, [], type);
+    return true;
+  } catch {
+    return false;
+  }
 }

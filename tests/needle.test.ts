@@ -3,6 +3,7 @@ import { expect, test } from 'vitest';
 
 import {
   CircularDependencyError,
+  InvalidConstructorError,
   InvalidOptionError,
   Needle,
   NeedleError,
@@ -476,6 +477,45 @@ test('Needle wraps a thrown revoked proxy once, at the failing service', () => {
   expect(() => needle.get('app')).toThrow(
     'Service for "db" could not be created (app -> db). Reason: [unserializable]',
   );
+});
+
+test('Needle accepts classes that can be called with new', () => {
+  class Service {}
+  const needle = new Needle([
+    { provide: 'bound', useClass: Service.bind(null) },
+    { provide: 'proxy', useClass: new Proxy(Service, {}) },
+    { provide: 'function', useClass: <any>function Legacy() {} },
+  ]);
+
+  expect(needle.get('bound')).toBeInstanceOf(Service);
+  expect(needle.get('proxy')).toBeInstanceOf(Service);
+  expect(needle.get('function')).toBeInstanceOf(Object);
+});
+
+test.each([
+  ['a generator', function* generator() {}, 'generator'],
+  ['an async function', async function load() {}, 'load'],
+  ['an arrow function', () => {}, '(anonymous)'],
+  ['a method', { method(this: void) {} }.method, 'method'],
+])('Needle rejects %s at registration', (_label, value, name) => {
+  expect(() => new Needle([{ provide: 'a', useClass: <any>value }])).toThrow(
+    `Unable to instantiate class (${name} is not instantiable).`,
+  );
+});
+
+test('Needle checks the parameters of a bound class', () => {
+  class Service {
+    constructor(_dependency: unknown) {}
+  }
+
+  expect(
+    () => new Needle([{ provide: 'a', useClass: <any>Service.bind(null) }]),
+  ).toThrow(InvalidConstructorError);
+  expect(
+    new Needle([
+      { provide: 'a', useClass: Service.bind(null, 'dependency') },
+    ]).get('a'),
+  ).toBeInstanceOf(Service);
 });
 
 test('Needle ignores use keys set to undefined', () => {
