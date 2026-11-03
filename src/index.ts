@@ -4,6 +4,7 @@ export {
   InvalidClassError,
   InvalidConstructorError,
   InvalidFactoryError,
+  InvalidOptionError,
   InvalidProviderError,
   NeedleError,
   ProviderConflictError,
