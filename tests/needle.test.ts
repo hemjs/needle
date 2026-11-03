@@ -295,7 +295,7 @@ test('Needle supports aliases to the empty string token', () => {
 });
 
 test.each([
-  [null, 'object'],
+  [null, 'null'],
   [0, 'number'],
   ['', 'string'],
   [false, 'boolean'],
@@ -311,7 +311,7 @@ test.each([null, 0, '', false])(
   'Needle throws for a useClass of %j',
   (type) => {
     expect(() => new Needle([{ provide: 'a', useClass: <any>type }])).toThrow(
-      `Unable to instantiate class (${type} is not instantiable).`,
+      `Unable to instantiate class (${type} is not instantiable) at index 0.`,
     );
   },
 );
@@ -500,7 +500,7 @@ test.each([
   ['a method', { method(this: void) {} }.method, 'method'],
 ])('Needle rejects %s at registration', (_label, value, name) => {
   expect(() => new Needle([{ provide: 'a', useClass: <any>value }])).toThrow(
-    `Unable to instantiate class (${name} is not instantiable).`,
+    `Unable to instantiate class (${name} is not instantiable) at index 0.`,
   );
 });
 
@@ -547,6 +547,65 @@ test('Needle checks the options before the provider list', () => {
 
 test('Needle accepts undefined for both arguments', () => {
   expect(new Needle(undefined, undefined).has('a')).toBe(false);
+});
+
+test('Needle ignores changes to the options after construction', () => {
+  const options: Record<string, unknown> = {};
+  const needle = new Needle([], options);
+  options['lifetime'] = 'bogus';
+  options['conflictPolicy'] = 'error';
+
+  needle
+    .addProvider({ provide: 'a', useFactory: () => ({}) })
+    .addProvider({ provide: 'a', useFactory: () => ({}) });
+
+  expect(needle.get('a')).toBe(needle.get('a'));
+});
+
+test('Needle reads each option once', () => {
+  let reads = 0;
+  const options = {
+    get lifetime() {
+      reads++;
+      return reads === 1 ? 'transient' : 'bogus';
+    },
+  };
+  const needle = new Needle(
+    [{ provide: 'a', useFactory: () => ({}) }],
+    <any>options,
+  );
+
+  expect(reads).toBe(1);
+  expect(needle.get('a')).not.toBe(needle.get('a'));
+});
+
+test('Needle reports the index of an invalid class', () => {
+  class Service {
+    constructor(_dependency: unknown) {}
+  }
+
+  expect(
+    () =>
+      new Needle([
+        { provide: 'a', useValue: 1 },
+        { provide: 'b', useClass: <any>5 },
+      ]),
+  ).toThrow('Unable to instantiate class (5 is not instantiable) at index 1.');
+  expect(
+    () =>
+      new Needle([
+        { provide: 'a', useValue: 1 },
+        { provide: 'b', useClass: <any>Service },
+      ]),
+  ).toThrow(
+    'Invalid class constructor "Service"; expected a default (no-argument) constructor at index 1.',
+  );
+});
+
+test('Needle omits the index for classes added with addProvider', () => {
+  expect(() =>
+    new Needle().addProvider({ provide: 'a', useClass: <any>5 }),
+  ).toThrow('Unable to instantiate class (5 is not instantiable).');
 });
 
 test('Needle ignores use keys set to undefined', () => {
@@ -733,7 +792,9 @@ test('Needle throws for null and undefined provider definitions', () => {
 test('Needle throws for invalid classes', () => {
   expect(
     () => new Needle([{ provide: Engine.name, useClass: <any>'blah' }]),
-  ).toThrow('Unable to instantiate class (blah is not instantiable).');
+  ).toThrow(
+    'Unable to instantiate class (blah is not instantiable) at index 0.',
+  );
 });
 
 test('Needle throws for non-instantiable functions', () => {
@@ -741,12 +802,14 @@ test('Needle throws for non-instantiable functions', () => {
 
   expect(
     () => new Needle([{ provide: Engine.name, useClass: <any>createEngine }]),
-  ).toThrow('Unable to instantiate class (createEngine is not instantiable).');
+  ).toThrow(
+    'Unable to instantiate class (createEngine is not instantiable) at index 0.',
+  );
 });
 
 test('Needle throws for invalid class constructors', () => {
   expect(() => new Needle([{ provide: Car.name, useClass: <any>Car }])).toThrow(
-    'Invalid class constructor "Car"; expected a default (no-argument) constructor.',
+    'Invalid class constructor "Car"; expected a default (no-argument) constructor at index 0.',
   );
 });
 
@@ -1358,7 +1421,7 @@ test('Needle names the conflict error', () => {
 test('Needle reports invalid classes without a prototype', () => {
   expect(
     () => new Needle([{ provide: 'a', useClass: Object.create(null) }]),
-  ).toThrow('Unable to instantiate class ({} is not instantiable).');
+  ).toThrow('Unable to instantiate class ({} is not instantiable) at index 0.');
 });
 
 test('Needle reports nested provider arrays as invalid providers', () => {
