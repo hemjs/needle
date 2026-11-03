@@ -345,6 +345,8 @@ const container = new Needle(
 
 Value providers always return the value they were given, and aliases follow the lifetime of their target.
 
+Any other `lifetime`, on a provider or in the options, throws `InvalidOptionError` when it is registered. Value and alias providers ignore `lifetime`.
+
 ## Conflict policy
 
 A conflict happens when a provider is registered for a token that already has one, either within the constructor's list or through `addProvider`. The `conflictPolicy` option decides what happens:
@@ -355,7 +357,7 @@ A conflict happens when a provider is registered for a token that already has on
 | `error`    | Needle throws a `ProviderConflictError` naming the token and, for the list, its index. |
 | `ignore`   | The new provider is skipped; the first registration wins.                              |
 
-Every provider is validated before the policy applies, so an invalid provider is reported whatever the policy.
+Every provider is validated before the policy applies, so an invalid provider is reported whatever the policy. Any other `conflictPolicy` throws `InvalidOptionError` when the container is created.
 
 `override` lets later providers replace earlier ones, for example when an application overrides defaults supplied by a library:
 
@@ -412,13 +414,14 @@ To handle every container error in one place, check for `NeedleError` instead. A
 | `InvalidClassError`       | `useClass` is not something that can be called with `new`.                                                                  |
 | `InvalidConstructorError` | `useClass` has a constructor with required parameters.                                                                      |
 | `InvalidFactoryError`     | `useFactory` is not a function.                                                                                             |
+| `InvalidOptionError`      | A `lifetime` or `conflictPolicy` value is not one of the allowed values.                                                    |
 | `ProviderConflictError`   | A token is registered twice under the `error` conflict policy.                                                              |
 | `CircularAliasError`      | Aliases form a loop.                                                                                                        |
 | `ProviderNotFoundError`   | `get` is called for a token with no provider.                                                                               |
 | `CircularDependencyError` | Services depend on each other while being created.                                                                          |
 | `ServiceNotCreatedError`  | A constructor or factory throws while creating a service.                                                                   |
 
-The first six are thrown when a provider is registered, so most configuration mistakes surface as soon as the container is created. The last three are thrown by `get`.
+The first seven are thrown when the container is created or a provider is registered, so most configuration mistakes surface as soon as the container is created. The last three are thrown by `get`.
 
 When a constructor or factory throws, Needle wraps the error once, at the service that failed, and shows the chain of services that led there. The original error is kept as `cause`:
 

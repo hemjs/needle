@@ -17,12 +17,20 @@ import {
   InvalidClassError,
   InvalidConstructorError,
   InvalidFactoryError,
+  InvalidOptionError,
   InvalidProviderError,
   ProviderConflictError,
   ProviderNotFoundError,
   ServiceNotCreatedError,
 } from './errors.js';
-import type { NeedleOptions } from './types.js';
+import type { ConflictPolicy, NeedleOptions } from './types.js';
+
+const LIFETIMES: readonly Lifetime[] = ['singleton', 'transient'];
+const CONFLICT_POLICIES: readonly ConflictPolicy[] = [
+  'override',
+  'error',
+  'ignore',
+];
 
 interface ValueRecord {
   kind: 'value';
@@ -49,6 +57,8 @@ export class Needle implements Container {
   readonly #options: NeedleOptions;
 
   constructor(providers: Provider[] = [], options: NeedleOptions = {}) {
+    checkOption('lifetime', options.lifetime, LIFETIMES);
+    checkOption('conflictPolicy', options.conflictPolicy, CONFLICT_POLICIES);
     this.#options = options;
 
     for (const [index, provider] of providers.entries()) {
@@ -130,7 +140,7 @@ export class Needle implements Container {
       return {
         kind: 'factory',
         factory: classToFactory(provider.useClass),
-        lifetime: provider.lifetime ?? this.#options.lifetime ?? 'singleton',
+        lifetime: this.#lifetime(provider.lifetime, index),
       };
     }
     if (isFactoryProvider(provider)) {
@@ -140,13 +150,21 @@ export class Needle implements Container {
       return {
         kind: 'factory',
         factory: provider.useFactory,
-        lifetime: provider.lifetime ?? this.#options.lifetime ?? 'singleton',
+        lifetime: this.#lifetime(provider.lifetime, index),
       };
     }
     if (isExistingProvider(provider) && isToken(provider.useExisting)) {
       return { kind: 'alias', target: provider.useExisting };
     }
     throw new InvalidProviderError(provider, index);
+  }
+
+  #lifetime(lifetime: Lifetime | undefined, index?: number): Lifetime {
+    return (
+      checkOption('lifetime', lifetime, LIFETIMES, index) ??
+      this.#options.lifetime ??
+      'singleton'
+    );
   }
 
   #getAlias(token: ProviderToken): ProviderToken {
@@ -227,6 +245,18 @@ function isFactoryProvider(provider: Provider): provider is FactoryProvider {
 
 function isExistingProvider(provider: Provider): provider is ExistingProvider {
   return (provider as ExistingProvider)?.useExisting !== undefined;
+}
+
+function checkOption<T extends string>(
+  option: string,
+  value: T | undefined,
+  allowed: readonly T[],
+  index?: number,
+): T | undefined {
+  if (value !== undefined && !allowed.includes(value)) {
+    throw new InvalidOptionError(option, value, allowed, index);
+  }
+  return value;
 }
 
 function isToken(value: unknown): value is ProviderToken {

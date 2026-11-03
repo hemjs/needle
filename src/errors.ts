@@ -58,6 +58,21 @@ export class InvalidFactoryError extends NeedleError {
   }
 }
 
+export class InvalidOptionError extends NeedleError {
+  static {
+    setName(this, 'InvalidOptionError');
+  }
+
+  constructor(
+    option: string,
+    value: unknown,
+    expected: readonly string[],
+    index?: number,
+  ) {
+    super(INVALID_OPTION(option, stringify(value), expected, atIndex(index)));
+  }
+}
+
 export class ProviderNotFoundError extends NeedleError {
   static {
     setName(this, 'ProviderNotFoundError');
@@ -117,6 +132,14 @@ const INVALID_CONSTRUCTOR = (name: string) =>
 
 const INVALID_FACTORY = (type: string, location: string) =>
   `Invalid factory provided; expected a function, but "${type}" was received${location}.`;
+
+const INVALID_OPTION = (
+  option: string,
+  value: string,
+  expected: readonly string[],
+  location: string,
+) =>
+  `Invalid ${option} "${value}"; expected one of ${expected.map((item) => `"${item}"`).join(', ')}${location}.`;
 
 const PROVIDER_NOT_FOUND = (token: string) =>
   `No provider for "${token}" was found; are you certain you provided it during configuration?`;

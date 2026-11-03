@@ -3,6 +3,7 @@ import { expect, test } from 'vitest';
 
 import {
   CircularDependencyError,
+  InvalidOptionError,
   Needle,
   NeedleError,
   ProviderNotFoundError,
@@ -351,6 +352,85 @@ test('Needle treats useValue undefined as a value', () => {
   ]);
 
   expect(needle.get('a')).toBeUndefined();
+});
+
+test.each([
+  ['class', { provide: 'a', useClass: class {} }],
+  ['factory', { provide: 'a', useFactory: () => 'made' }],
+])('Needle rejects an invalid lifetime on a %s provider', (_kind, base) => {
+  const message =
+    'Invalid lifetime "Singleton"; expected one of "singleton", "transient"';
+  const provider = { ...base, lifetime: <any>'Singleton' };
+
+  expect(() => new Needle([provider])).toThrow(InvalidOptionError);
+  expect(() => new Needle([provider])).toThrow(`${message} at index 0.`);
+  expect(() => new Needle().addProvider(provider)).toThrow(`${message}.`);
+});
+
+test.each([null, 1, 'shared'])(
+  'Needle rejects a lifetime of %j',
+  (lifetime) => {
+    expect(
+      () =>
+        new Needle([
+          { provide: 'a', useFactory: () => 'made', lifetime: <any>lifetime },
+        ]),
+    ).toThrow(InvalidOptionError);
+  },
+);
+
+test('Needle leaves the container unchanged when addProvider rejects a lifetime', () => {
+  const needle = new Needle([{ provide: 'a', useValue: 'original' }]);
+
+  expect(() =>
+    needle.addProvider({
+      provide: 'a',
+      useFactory: () => 'replacement',
+      lifetime: <any>'Singleton',
+    }),
+  ).toThrow(InvalidOptionError);
+  expect(needle.get('a')).toBe('original');
+});
+
+test('Needle rejects an invalid lifetime option', () => {
+  expect(() => new Needle([], { lifetime: <any>'Transient' })).toThrow(
+    'Invalid lifetime "Transient"; expected one of "singleton", "transient".',
+  );
+});
+
+test('Needle rejects an invalid conflictPolicy option', () => {
+  expect(() => new Needle([], { conflictPolicy: <any>'eror' })).toThrow(
+    'Invalid conflictPolicy "eror"; expected one of "override", "error", "ignore".',
+  );
+});
+
+test('Needle checks options before any provider', () => {
+  expect(
+    () => new Needle([<any>'blah'], { conflictPolicy: <any>'eror' }),
+  ).toThrow(InvalidOptionError);
+});
+
+test('Needle accepts every valid lifetime and conflictPolicy', () => {
+  for (const conflictPolicy of ['override', 'error', 'ignore'] as const) {
+    for (const lifetime of ['singleton', 'transient'] as const) {
+      const needle = new Needle(
+        [{ provide: 'a', useFactory: () => ({}), lifetime }],
+        { lifetime, conflictPolicy },
+      );
+      expect(needle.get('a') === needle.get('a')).toBe(
+        lifetime === 'singleton',
+      );
+    }
+  }
+});
+
+test('Needle still ignores lifetime on value and alias providers', () => {
+  const needle = new Needle([
+    { provide: 'a', useValue: 1, lifetime: 'bogus' } as any,
+    { provide: 'b', useExisting: 'a', lifetime: 'bogus' } as any,
+  ]);
+
+  expect(needle.get('b')).toBe(1);
 });
 
 test('Needle ignores use keys set to undefined', () => {
