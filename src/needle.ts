@@ -11,6 +11,7 @@ import type {
 } from '@armscye/container';
 import type { NoArgument } from '@armscye/core';
 
+import { CONFLICT_POLICIES, LIFETIMES } from './constants.js';
 import {
   CircularAliasError,
   CircularDependencyError,
@@ -23,14 +24,7 @@ import {
   ProviderNotFoundError,
   ServiceNotCreatedError,
 } from './errors.js';
-import type { ConflictPolicy, NeedleOptions } from './types.js';
-
-const LIFETIMES: readonly Lifetime[] = ['singleton', 'transient'];
-const CONFLICT_POLICIES: readonly ConflictPolicy[] = [
-  'override',
-  'error',
-  'ignore',
-];
+import type { NeedleOptions } from './types.js';
 
 interface ValueRecord {
   kind: 'value';
